@@ -229,6 +229,7 @@ func (this *QRequest) handleResponseError(err error) {
 func (this *QRequest) Send() {
 	if len(this.errors) > 0 {
         fmt.Println(errors.Join(this.errors...))
+		return
     }
 	httpClient := &http.Client{
 		Timeout: this.timeout,
