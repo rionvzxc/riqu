@@ -1,0 +1,22 @@
+package main
+
+import (
+	"fmt"
+	"github.com/rionvzxc/rxquest"
+)
+
+func main() {
+	rxquest.New().
+		Url("https://httpbin.org/get").
+		Method("GET").
+		OnSuccess(func(res *rxquest.QResponse) {
+			text, _ := res.BodyText()
+
+			fmt.Println("Status:", res.StatusCode)
+			fmt.Println(text)
+		}).
+		OnError(func(err error) {
+			fmt.Println(err)
+		}).
+		Send()
+}
