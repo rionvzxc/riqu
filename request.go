@@ -88,7 +88,7 @@ func (this *QRequest) Header(headerMap TMap) *QRequest {
 		case []string:
 			this.header[key] = data
 		default:
-			this.configErrors = append(this.configErrors, fmt.Errorf("Invalid header value type for %q: %T", key, val))
+			this.addConfigError(fmt.Errorf("Invalid header value type for %q: %T", key, val))
 		}
 	}
 	return this
