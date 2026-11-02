@@ -80,17 +80,12 @@ func (this *QRequest) CookieJar(cookieJar *QCookieJar) *QRequest {
     this.jar = cookieJar.jar
     return this
 }
-func (this *QRequest) Header(headerMap TMap) *QRequest {
-	for key, val := range headerMap {
-		switch data := val.(type) {
-		case string:
-			this.header[key] = []string{data}
-		case []string:
-			this.header[key] = data
-		default:
-			this.addConfigError(fmt.Errorf("Invalid header value type for %q: %T", key, val))
-		}
-	}
+func (this *QRequest) Header(header THeader) *QRequest {
+	this.header = header.Clone()
+	return this
+}
+func (this *QRequest) SetHeader(key string, values ...string) *QRequest {
+	this.header[key] = values
 	return this
 }
 func (this *QRequest) Cookie(cookieMap TMapStr) *QRequest {

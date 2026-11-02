@@ -8,6 +8,7 @@ import (
 type TMap map[string]any
 type TMapStr map[string]string
 type TCookieJarOptions = cookiejar.Options
+type THeader = http.Header
 type TCookie = http.Cookie
 type TRedirectResponseMode uint
 type TRedirect struct {
