@@ -24,7 +24,7 @@ type QRequest struct {
 	body     TBody
 	timeout  time.Duration
 	redirect TRedirect
-	errors   []error
+	configErrors   []error
 
 	onSuccessFunc func(*QResponse)
 	onErrorFunc func(error)
@@ -48,7 +48,7 @@ func New() *QRequest {
 }
 func (this *QRequest) addConfigError(err error) {
 	if err != nil {
-		this.errors = append(this.errors, err)
+		this.configErrors = append(this.configErrors, err)
 	}
 }
 func (this *QRequest) Url(url string) *QRequest {
@@ -98,7 +98,7 @@ func (this *QRequest) Header(headerMap TMap) *QRequest {
 		case []string:
 			this.header[key] = data
 		default:
-			this.errors = append(this.errors, fmt.Errorf("Invalid header value type for %q: %T", key, val))
+			this.configErrors = append(this.configErrors, fmt.Errorf("Invalid header value type for %q: %T", key, val))
 		}
 	}
 	return this
@@ -227,8 +227,8 @@ func (this *QRequest) handleResponseError(err error) {
 	}
 }
 func (this *QRequest) Send() {
-	if len(this.errors) > 0 {
-        fmt.Println(errors.Join(this.errors...))
+	if len(this.configErrors) > 0 {
+        fmt.Println(errors.Join(this.configErrors...))
 		return
     }
 	httpClient := &http.Client{
