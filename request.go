@@ -53,21 +53,11 @@ func (this *QRequest) addConfigError(err error) {
 }
 func (this *QRequest) Url(url string) *QRequest {
 	url = strings.TrimSpace(url)
-
-	if url == "" {
-		this.addConfigError(fmt.Errorf("Request Url is empty"))
-		return this
-	}
 	this.url = url
 	return this
 }
 func (this *QRequest) Method(method string) *QRequest {
 	method = strings.TrimSpace(method)
-	
-	if method == "" {
-		this.addConfigError(fmt.Errorf("Request Method is empty"))
-		return this
-	}
 	this.method = strings.ToUpper(method)
 	return this
 }
@@ -227,7 +217,14 @@ func (this *QRequest) handleResponseError(err error) {
 	}
 }
 func (this *QRequest) Send() {
+	if this.url == "" {
+		this.addConfigError(fmt.Errorf("Request Url is empty"))
+	}
+	if this.method == "" {
+		this.addConfigError(fmt.Errorf("Request Method is empty"))
+	}
 	if len(this.configErrors) > 0 {
+		fmt.Println("Request Configuration Error:")
         fmt.Println(errors.Join(this.configErrors...))
 		return
     }
