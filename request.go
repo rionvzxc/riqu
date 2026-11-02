@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -20,7 +21,7 @@ type QRequest struct {
 	method   string
 	header   http.Header
 	cookies  []*http.Cookie
-    jar      http.CookieJar
+    cookieJar *QCookieJar
 	body     TBody
 	timeout  time.Duration
 	redirect TRedirect
@@ -76,10 +77,6 @@ func (this *QRequest) DELETE(url string) *QRequest {
 func (this *QRequest) PATCH(url string) *QRequest {
 	return this.Url(url).Method("PATCH")
 }
-func (this *QRequest) CookieJar(cookieJar *QCookieJar) *QRequest {
-    this.jar = cookieJar.jar
-    return this
-}
 func (this *QRequest) Header(header THeader) *QRequest {
 	this.header = header.Clone()
 	return this
@@ -98,6 +95,19 @@ func (this *QRequest) Cookie(cookieMap TMapStr) *QRequest {
 		})
 	}
 	return this
+}
+func (this *QRequest) CookieJar(options *TCookieJarOptions) *QRequest {
+    jar, err := cookiejar.New(options)
+
+    if err != nil {
+        this.addConfigError(err)
+		return this
+    }
+    this.cookieJar = &QCookieJar{jar: jar}
+    return this
+}
+func (this *QRequest) GetCookieJar() *QCookieJar {
+	return this.cookieJar
 }
 func (this *QRequest) BodyRaw(data []byte) *QRequest {
 	this.body = TBody{
@@ -225,7 +235,7 @@ func (this *QRequest) Send() {
     }
 	httpClient := &http.Client{
 		Timeout: this.timeout,
-		Jar: this.jar,
+		Jar: this.cookieJar.jar,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},

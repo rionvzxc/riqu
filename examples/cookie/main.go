@@ -6,13 +6,7 @@ import (
 )
 
 func main() {
-	jar, err := rxquest.NewCookieJar(nil)
-
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	client := rxquest.New().CookieJar(jar)
+	client := rxquest.New().CookieJar(nil)
 
 	// Set Cookie
 	client.GET("https://httpbin.org/cookies/set?session_id=abc123456&username=rxquest").
@@ -30,7 +24,8 @@ func main() {
 
 	// Get Cookie from Jar
 	fmt.Println("\nCookie Jar:")
-	cookies := jar.Cookies("https://httpbin.org")
+	jar := client.GetCookieJar()
+	cookies := jar.GetCookies("https://httpbin.org")
 
 	for _, cookie := range cookies {
 		fmt.Printf("%s = %s\n", cookie.Name, cookie.Value)
