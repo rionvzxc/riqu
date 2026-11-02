@@ -9,20 +9,13 @@ import (
 type QCookieJar struct {
 	jar http.CookieJar
 }
-func NewCookieJar(options *TCookieJarOptions) *QCookieJar {
-	var jarOptions *cookiejar.Options
+func NewCookieJar(options *TCookieJarOptions) (*QCookieJar, error) {
+    jar, err := cookiejar.New(options)
 
-	if options != nil {
-		jarOptions = (*cookiejar.Options)(options)
-	}
-	jar, err := cookiejar.New(jarOptions)
-
-	if err != nil {
-		panic(err)
-	}
-	return &QCookieJar{
-		jar: jar,
-	}
+    if err != nil {
+        return nil, err
+    }
+    return &QCookieJar{jar: jar}, nil
 }
 func (this *QCookieJar) Jar() http.CookieJar {
 	return this.jar

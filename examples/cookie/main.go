@@ -6,7 +6,12 @@ import (
 )
 
 func main() {
-	jar := rxquest.NewCookieJar(nil)
+	jar, err := rxquest.NewCookieJar(nil)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	client := rxquest.New().CookieJar(jar)
 
 	// Set Cookie
