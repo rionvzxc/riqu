@@ -86,8 +86,8 @@ func (this *QRequest) DELETE(url string) *QRequest {
 func (this *QRequest) PATCH(url string) *QRequest {
 	return this.Url(url).Method("PATCH")
 }
-func (this *QRequest) CookieJar(jar *QCookieJar) *QRequest {
-    this.jar = jar.Jar()
+func (this *QRequest) CookieJar(cookieJar *QCookieJar) *QRequest {
+    this.jar = cookieJar.jar
     return this
 }
 func (this *QRequest) Header(headerMap TMap) *QRequest {

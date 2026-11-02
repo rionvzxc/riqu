@@ -17,9 +17,6 @@ func NewCookieJar(options *TCookieJarOptions) (*QCookieJar, error) {
     }
     return &QCookieJar{jar: jar}, nil
 }
-func (this *QCookieJar) Jar() http.CookieJar {
-	return this.jar
-}
 func (this *QCookieJar) Cookies(rawURL string) []*TCookie {
 	if this == nil || this.jar == nil {
 		return nil
