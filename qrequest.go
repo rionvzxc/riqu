@@ -235,10 +235,12 @@ func (this *QRequest) Send() {
     }
 	httpClient := &http.Client{
 		Timeout: this.timeout,
-		Jar: this.cookieJar.jar,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
+	}
+	if this.cookieJar != nil {
+		httpClient.Jar = this.cookieJar.jar
 	}
 	currentUrl := this.url
 	previousUrl := ""
