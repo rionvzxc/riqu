@@ -10,12 +10,12 @@ func main() {
 	rxquest.New().
 		POST("https://httpbin.org/post").
 		BodyMultipart(
-			rxquest.TMapStr{
+			rxquest.TValue{
 				"name":    "rxquest",
 				"version": "1.0",
 				"type":    "multipart",
 			},
-			rxquest.TMapStr{
+			rxquest.TValue{
 				"samplefile": "examples/multipart/sample.txt",
 			},
 		).

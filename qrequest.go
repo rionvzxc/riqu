@@ -85,7 +85,7 @@ func (this *QRequest) SetHeader(key string, values ...string) *QRequest {
 	this.header[key] = values
 	return this
 }
-func (this *QRequest) Cookie(cookieMap TMapStr) *QRequest {
+func (this *QRequest) Cookie(cookieMap TValue) *QRequest {
 	this.cookies = nil
 
 	for key, val := range cookieMap {
@@ -96,7 +96,7 @@ func (this *QRequest) Cookie(cookieMap TMapStr) *QRequest {
 	}
 	return this
 }
-func (this *QRequest) CookieJar(options *TCookieJarOptions) *QRequest {
+func (this *QRequest) CookieJar(options *TJarOptions) *QRequest {
     jar, err := cookiejar.New(options)
 
     if err != nil {
@@ -131,7 +131,7 @@ func (this *QRequest) BodyJSON(jsonData any) *QRequest {
 	}
 	return this
 }
-func (this *QRequest) BodyForm(formMap TMapStr) *QRequest {
+func (this *QRequest) BodyForm(formMap TValue) *QRequest {
 	form := url.Values{}
 
 	for key, val := range formMap {
@@ -143,7 +143,7 @@ func (this *QRequest) BodyForm(formMap TMapStr) *QRequest {
 	}
 	return this
 }
-func (this *QRequest) BodyMultipart(formMap TMapStr, fileMap TMapStr) *QRequest {
+func (this *QRequest) BodyMultipart(formMap TValue, fileMap TValue) *QRequest {
 	var buffer bytes.Buffer
 	writer := multipart.NewWriter(&buffer)
 	// TEXT FIELDS

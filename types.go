@@ -6,8 +6,8 @@ import (
 )
 
 type TMap map[string]any
-type TMapStr map[string]string
-type TCookieJarOptions = cookiejar.Options
+type TValue map[string]string
+type TJarOptions = cookiejar.Options
 type THeader = http.Header
 type TCookie = http.Cookie
 type TRedirectResponseMode uint

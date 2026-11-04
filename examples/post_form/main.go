@@ -8,7 +8,7 @@ import (
 func main() {
 	rxquest.New().
 		POST("https://httpbin.org/post").
-		BodyForm(rxquest.TMapStr{
+		BodyForm(rxquest.TValue{
 			"name": "rxquest",
 			"version": "1.0",
 		}).
