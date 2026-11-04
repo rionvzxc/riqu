@@ -11,6 +11,10 @@ func main() {
 		BodyJSON(rxquest.TMap{
 			"name":    "rxquest",
 			"version": "1.0",
+			"config": rxquest.TMap{
+				"timeout": 30,
+				"retry":   3,
+			},
 		}).
 		OnSuccess(func(res *rxquest.QResponse) {
 			var data struct {
@@ -24,7 +28,13 @@ func main() {
 			fmt.Println("Response JSON:")
 
 			for key, value := range data.JSON {
-				fmt.Println(key, "=", value)
+				fmt.Printf("%s = %v\n", key, value)
+
+				if nested, ok := value.(map[string]any); ok {
+					for nestedKey, nestedValue := range nested {
+						fmt.Printf("  %s = %v\n", nestedKey, nestedValue)
+					}
+				}
 			}
 		}).
 		OnError(func(err error) {
