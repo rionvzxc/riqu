@@ -1,11 +1,11 @@
-# rxquest
+# riqu
 
-`rxquest` is a lightweight HTTP client library for Go, designed with a simple and chainable API. It makes sending HTTP requests, handling responses, managing cookies, and downloading files straightforward and convenient.
+`riqu` is a lightweight HTTP client library for Go, designed with a simple and chainable API. It makes sending HTTP requests, handling responses, managing cookies, and downloading files straightforward and convenient.
 
 ## Installation
 
 ```bash
-go get github.com/rionvzxc/rxquest
+go get github.com/rionvzxc/riqu
 ```
 
 ## Features
@@ -29,13 +29,13 @@ package main
 import (
 	"fmt"
 
-	"github.com/rionvzxc/rxquest"
+	"github.com/rionvzxc/riqu"
 )
 
 func main() {
-	rxquest.New().
+	riqu.New().
 		GET("https://httpbin.org/get").
-		OnSuccess(func(res *rxquest.QResponse) {
+		OnSuccess(func(res *riqu.QResponse) {
 			body, _ := res.BodyText()
 			fmt.Println(res.StatusCode)
 			fmt.Println(body)
@@ -53,15 +53,15 @@ Runnable examples are available in the repository:
 
 | Example | Description |
 |---|---|
-| [basic](https://github.com/rionvzxc/rxquest/tree/main/examples/basic) | Basic HTTP request |
-| [basic2](https://github.com/rionvzxc/rxquest/tree/main/examples/basic2) | Basic request example |
-| [header](https://github.com/rionvzxc/rxquest/tree/main/examples/header) | Custom request headers |
-| [cookie](https://github.com/rionvzxc/rxquest/tree/main/examples/cookie) | Cookie Jar management |
-| [post_json](https://github.com/rionvzxc/rxquest/tree/main/examples/post_json) | JSON request and response |
-| [post_form](https://github.com/rionvzxc/rxquest/tree/main/examples/post_form) | Form URL-encoded request |
-| [multipart](https://github.com/rionvzxc/rxquest/tree/main/examples/multipart) | Multipart form and file upload |
-| [download](https://github.com/rionvzxc/rxquest/tree/main/examples/download) | Download files |
-| [timeout](https://github.com/rionvzxc/rxquest/tree/main/examples/timeout) | Request timeout and error handling |
+| [basic](https://github.com/rionvzxc/riqu/tree/main/examples/basic) | Basic HTTP request |
+| [basic2](https://github.com/rionvzxc/riqu/tree/main/examples/basic2) | Basic request example |
+| [header](https://github.com/rionvzxc/riqu/tree/main/examples/header) | Custom request headers |
+| [cookie](https://github.com/rionvzxc/riqu/tree/main/examples/cookie) | Cookie Jar management |
+| [post_json](https://github.com/rionvzxc/riqu/tree/main/examples/post_json) | JSON request and response |
+| [post_form](https://github.com/rionvzxc/riqu/tree/main/examples/post_form) | Form URL-encoded request |
+| [multipart](https://github.com/rionvzxc/riqu/tree/main/examples/multipart) | Multipart form and file upload |
+| [download](https://github.com/rionvzxc/riqu/tree/main/examples/download) | Download files |
+| [timeout](https://github.com/rionvzxc/riqu/tree/main/examples/timeout) | Request timeout and error handling |
 
 To run an example, clone the repository and execute:
 

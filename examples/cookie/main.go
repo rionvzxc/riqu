@@ -2,15 +2,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/rionvzxc/rxquest"
+	"github.com/rionvzxc/riqu"
 )
 
 func main() {
-	client := rxquest.New().CookieJar(nil)
+	client := riqu.New().CookieJar(nil)
 
 	// Set Cookie
-	client.GET("https://httpbin.org/cookies/set?session_id=abc123456&username=rxquest").
-		OnSuccess(func(res *rxquest.QResponse) {
+	client.GET("https://httpbin.org/cookies/set?session_id=abc123456&username=riqu").
+		OnSuccess(func(res *riqu.QResponse) {
 			body, _ := res.BodyText()
 
 			fmt.Println("Response:")

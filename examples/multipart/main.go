@@ -3,23 +3,23 @@ package main
 import (
 	"fmt"
 
-	"github.com/rionvzxc/rxquest"
+	"github.com/rionvzxc/riqu"
 )
 
 func main() {
-	rxquest.New().
+	riqu.New().
 		POST("https://httpbin.org/post").
 		BodyMultipart(
-			rxquest.TValue{
-				"name":    "rxquest",
+			riqu.TValue{
+				"name":    "riqu",
 				"version": "1.0",
 				"type":    "multipart",
 			},
-			rxquest.TValue{
+			riqu.TValue{
 				"samplefile": "examples/multipart/sample.txt",
 			},
 		).
-		OnSuccess(func(res *rxquest.QResponse) {
+		OnSuccess(func(res *riqu.QResponse) {
 			text, _ := res.BodyText()
 
 			fmt.Println("Status:", res.StatusCode)

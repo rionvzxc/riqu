@@ -2,20 +2,20 @@ package main
 
 import (
 	"fmt"
-	"github.com/rionvzxc/rxquest"
+	"github.com/rionvzxc/riqu"
 )
 
 func main() {
-	rxquest.New().
+	riqu.New().
 		GET("https://httpbin.org/headers").
-		Header(rxquest.THeader{
-			"X-App":     {"rxquest"},
+		Header(riqu.THeader{
+			"X-App":     {"riqu"},
 			"X-Version": {"1.0"},
-			"User-Agent": {"RxquestClient/1.0"},
+			"User-Agent": {"riquClient/1.0"},
 			"Accept":     {"application/json"},
 		}).
 		SetHeader("X-Test", "value1", "value2", "value3").
-		OnSuccess(func(res *rxquest.QResponse) {
+		OnSuccess(func(res *riqu.QResponse) {
 			text, _ := res.BodyText()
 			fmt.Println(text)
 		}).

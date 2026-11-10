@@ -1,4 +1,4 @@
-package rxquest
+package riqu
 
 import (
 	"net/http"

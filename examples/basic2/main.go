@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/rionvzxc/rxquest"
+	"github.com/rionvzxc/riqu"
 )
 
 func main() {
-	rxquest.New().
+	riqu.New().
 		GET("https://httpbin.org/get").
-		OnSuccess(func(res *rxquest.QResponse) {
+		OnSuccess(func(res *riqu.QResponse) {
 			text, _ := res.BodyText()
 
 			fmt.Println("Status:", res.StatusCode)

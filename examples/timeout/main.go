@@ -3,14 +3,14 @@ package main
 import (
 	"fmt"
 	"time"
-	"github.com/rionvzxc/rxquest"
+	"github.com/rionvzxc/riqu"
 )
 
 func main() {
-	rxquest.New().
+	riqu.New().
 		Url("https://httpbin.org/delay/5").
 		Timeout(2 * time.Second).
-		OnSuccess(func(res *rxquest.QResponse) {
+		OnSuccess(func(res *riqu.QResponse) {
 			fmt.Println("Success:", res.StatusCode)
 		}).
 		OnError(func(err error) {

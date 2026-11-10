@@ -2,17 +2,17 @@ package main
 
 import (
 	"fmt"
-	"github.com/rionvzxc/rxquest"
+	"github.com/rionvzxc/riqu"
 )
 
 func main() {
-	rxquest.New().
+	riqu.New().
 		POST("https://httpbin.org/post").
-		BodyForm(rxquest.TValue{
-			"name": "rxquest",
+		BodyForm(riqu.TValue{
+			"name": "riqu",
 			"version": "1.0",
 		}).
-		OnSuccess(func(res *rxquest.QResponse) {
+		OnSuccess(func(res *riqu.QResponse) {
 			text, _ := res.BodyText()
 			fmt.Println(text)
 		}).

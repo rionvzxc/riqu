@@ -1,2 +1,2 @@
-Hello from rxquest!
+Hello from riqu!
 This is a multipart file upload example.

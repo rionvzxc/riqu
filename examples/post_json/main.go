@@ -2,23 +2,23 @@ package main
 
 import (
 	"fmt"
-	"github.com/rionvzxc/rxquest"
+	"github.com/rionvzxc/riqu"
 )
 
 func main() {
-	rxquest.New().
+	riqu.New().
 		POST("https://httpbin.org/post").
-		BodyJSON(rxquest.TMap{
-			"name":    "rxquest",
+		BodyJSON(riqu.TMap{
+			"name":    "riqu",
 			"version": "1.0",
-			"config": rxquest.TMap{
+			"config": riqu.TMap{
 				"timeout": 30,
 				"retry":   3,
 			},
 		}).
-		OnSuccess(func(res *rxquest.QResponse) {
+		OnSuccess(func(res *riqu.QResponse) {
 			var data struct {
-				JSON rxquest.TMap `json:"json"`
+				JSON riqu.TMap `json:"json"`
 			}
 			if err := res.BodyJSON(&data); err != nil {
 				fmt.Println("JSON Error:", err)

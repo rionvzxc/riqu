@@ -2,14 +2,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/rionvzxc/rxquest"
+	"github.com/rionvzxc/riqu"
 )
 
 func main() {
-	rxquest.New().
+	riqu.New().
 		GET("https://httpbin.org/image/png").
-		OnSuccess(func(res *rxquest.QResponse) {
-			err := res.BodyFile(&rxquest.TFileOptions{
+		OnSuccess(func(res *riqu.QResponse) {
+			err := res.BodyFile(&riqu.TFileOptions{
 				Dir: "downloads",
 				DefaultFilename: "httpbin-image",
 			})

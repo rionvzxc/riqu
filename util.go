@@ -1,4 +1,4 @@
-package rxquest
+package riqu
 
 func IsRedirectStatus(statusCode int) bool {
 	switch statusCode {
