@@ -8,7 +8,6 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
-	"net/http/cookiejar"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -92,18 +91,9 @@ func (this *QRequest) Cookie(cookieMap TValue) *QRequest {
 	}
 	return this
 }
-func (this *QRequest) CookieJar(options *TJarOptions) *QRequest {
-    jar, err := cookiejar.New(options)
-
-    if err != nil {
-        this.addConfigError(err)
-		return this
-    }
-    this.cookieJar = &QCookieJar{jar: jar}
+func (this *QRequest) CookieJar(cookieJar *QCookieJar) *QRequest {
+	this.cookieJar = cookieJar
     return this
-}
-func (this *QRequest) GetCookieJar() *QCookieJar {
-	return this.cookieJar
 }
 func (this *QRequest) BodyRaw(data []byte) *QRequest {
 	this.body = TBody{

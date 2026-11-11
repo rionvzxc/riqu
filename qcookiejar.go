@@ -2,11 +2,20 @@ package riqu
 
 import (
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 )
 
 type QCookieJar struct {
 	jar http.CookieJar
+}
+func NewCookieJar(options *TJarOptions) *QCookieJar {
+	jar, err := cookiejar.New(options)
+
+    if err != nil {
+        panic(err)
+    }
+    return &QCookieJar{jar: jar}
 }
 func (this *QCookieJar) GetCookies(rawURL string) []*TCookie {
 	if this == nil || this.jar == nil {

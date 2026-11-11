@@ -6,10 +6,12 @@ import (
 )
 
 func main() {
-	client := riqu.New().CookieJar(nil)
+	cookieJar := riqu.NewCookieJar(nil)
 
 	// Set Cookie
-	client.GET("https://httpbin.org/cookies/set?session_id=abc123456&username=riqu").
+	riqu.New().
+		CookieJar(cookieJar).
+		GET("https://httpbin.org/cookies/set?session_id=abc123456&username=riqu").
 		OnSuccess(func(res *riqu.QResponse) {
 			body, _ := res.BodyText()
 
@@ -24,8 +26,7 @@ func main() {
 
 	// Get Cookie from Jar
 	fmt.Println("\nCookie Jar:")
-	jar := client.GetCookieJar()
-	cookies := jar.GetCookies("https://httpbin.org")
+	cookies := cookieJar.GetCookies("https://httpbin.org")
 
 	for _, cookie := range cookies {
 		fmt.Printf("%s = %s\n", cookie.Name, cookie.Value)
