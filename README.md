@@ -27,23 +27,23 @@ go get github.com/rionvzxc/riqu
 package main
 
 import (
-	"fmt"
+    "fmt"
 
-	"github.com/rionvzxc/riqu"
+    "github.com/rionvzxc/riqu"
 )
 
 func main() {
-	riqu.New().
-		GET("https://httpbin.org/get").
-		OnSuccess(func(res *riqu.QResponse) {
-			body, _ := res.BodyText()
-			fmt.Println(res.StatusCode)
-			fmt.Println(body)
-		}).
-		OnError(func(err error) {
-			fmt.Println(err)
-		}).
-		Send()
+    riqu.New().
+        GET("https://httpbin.org/get").
+        OnSuccess(func(res *riqu.QResponse) {
+            text := res.BodyText()
+            fmt.Println(res.StatusCode)
+            fmt.Println(text)
+        }).
+        OnError(func(err error) {
+            fmt.Println(err)
+        }).
+        Send()
 }
 ```
 
