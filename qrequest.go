@@ -95,16 +95,16 @@ func (this *QRequest) CookieJar(cookieJar *QCookieJar) *QRequest {
 	this.cookieJar = cookieJar
     return this
 }
-func (this *QRequest) SetData(data []byte) *QRequest {
+func (this *QRequest) Data(data []byte) *QRequest {
 	this.body = TBody{
 		Data: data,
 	}
 	return this
 }
-func (this *QRequest) SetText(text string) *QRequest {
-	return this.SetData([]byte(text))
+func (this *QRequest) Text(text string) *QRequest {
+	return this.Data([]byte(text))
 }
-func (this *QRequest) SetJSON(jsonData any) *QRequest {
+func (this *QRequest) JSON(jsonData any) *QRequest {
 	data, err := json.Marshal(jsonData)
 
 	if err != nil {
@@ -117,7 +117,7 @@ func (this *QRequest) SetJSON(jsonData any) *QRequest {
 	}
 	return this
 }
-func (this *QRequest) SetForm(formMap TValue) *QRequest {
+func (this *QRequest) Form(formMap TValue) *QRequest {
 	form := url.Values{}
 
 	for key, val := range formMap {
@@ -129,7 +129,7 @@ func (this *QRequest) SetForm(formMap TValue) *QRequest {
 	}
 	return this
 }
-func (this *QRequest) SetMultipart(formMap TValue, fileMap TValue) *QRequest {
+func (this *QRequest) FormMultipart(formMap TValue, fileMap TValue) *QRequest {
 	var buffer bytes.Buffer
 	writer := multipart.NewWriter(&buffer)
 	// TEXT FIELDS
