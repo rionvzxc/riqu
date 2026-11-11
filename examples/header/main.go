@@ -14,7 +14,6 @@ func main() {
 			"User-Agent": {"riquClient/1.0"},
 			"Accept":     {"application/json"},
 		}).
-		SetHeader("X-Test", "value1", "value2", "value3").
 		OnSuccess(func(res *riqu.QResponse) {
 			text, _ := res.BodyText()
 			fmt.Println(text)
