@@ -5,7 +5,7 @@ import (
 	"net/http/cookiejar"
 )
 
-type TMap map[string]any
+type TMap = map[string]any
 type TValue map[string]string
 type TJarOptions = cookiejar.Options
 type THeader = http.Header
