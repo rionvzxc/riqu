@@ -8,7 +8,7 @@ import (
 func main() {
 	riqu.New().
 		POST("https://httpbin.org/post").
-		BodyJSON(riqu.TMap{
+		SetJSON(riqu.TMap{
 			"name":    "riqu",
 			"version": "1.0",
 			"config": riqu.TMap{
@@ -20,7 +20,7 @@ func main() {
 			var data struct {
 				JSON riqu.TMap `json:"json"`
 			}
-			if err := res.BodyJSON(&data); err != nil {
+			if err := res.GetJSON(&data); err != nil {
 				fmt.Println("JSON Error:", err)
 				return
 			}

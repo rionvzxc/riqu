@@ -21,27 +21,27 @@ type QResponse struct {
 	bodyRead      bool
 	body io.ReadCloser
 }
-func (this *QResponse) BodyRaw() ([]byte, error) {
+func (this *QResponse) GetData() []byte {
 	if this.bodyRead {
-		return nil, fmt.Errorf("Response body already read")
+		return nil
 	}
 	if this.body == nil {
-		return nil, fmt.Errorf("Response body unavailable")
+		return nil
 	}
 	this.bodyRead = true
 	defer this.body.Close()
 	body, err := io.ReadAll(this.body)
 
 	if err != nil {
-		return nil, err
+		return nil
 	}
-	return body, nil
+	return body
 }
-func (this *QResponse) BodyText() (string, error) {
-	rawData, err := this.BodyRaw()
-	return string(rawData), err
+func (this *QResponse) GetText() string {
+	rawData := this.GetData()
+	return string(rawData)
 }
-func (this *QResponse) BodyJSON(target any) error {
+func (this *QResponse) GetJSON(target any) error {
 	if this.bodyRead {
 		return fmt.Errorf("Response body already read")
 	}
@@ -52,7 +52,7 @@ func (this *QResponse) BodyJSON(target any) error {
 	defer this.body.Close()
 	return json.NewDecoder(this.body).Decode(target)
 }
-func (this *QResponse) BodyFile(options *TFileOptions) error {
+func (this *QResponse) GetFile(options *TFileOptions) error {
 	if this.bodyRead {
 		return fmt.Errorf("Response body already read")
 	}

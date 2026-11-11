@@ -13,7 +13,7 @@ func main() {
 		CookieJar(cookieJar).
 		GET("https://httpbin.org/cookies/set?session_id=abc123456&username=riqu").
 		OnSuccess(func(res *riqu.QResponse) {
-			body, _ := res.BodyText()
+			body := res.GetText()
 
 			fmt.Println("Response:")
 			fmt.Println("Status:", res.StatusCode)

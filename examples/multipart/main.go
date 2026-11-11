@@ -9,7 +9,7 @@ import (
 func main() {
 	riqu.New().
 		POST("https://httpbin.org/post").
-		BodyMultipart(
+		SetMultipart(
 			riqu.TValue{
 				"name":    "riqu",
 				"version": "1.0",
@@ -20,7 +20,7 @@ func main() {
 			},
 		).
 		OnSuccess(func(res *riqu.QResponse) {
-			text, _ := res.BodyText()
+			text := res.GetText()
 
 			fmt.Println("Status:", res.StatusCode)
 			fmt.Println(text)

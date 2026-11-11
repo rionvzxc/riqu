@@ -9,7 +9,7 @@ func main() {
 	riqu.New().
 		GET("https://httpbin.org/image/png").
 		OnSuccess(func(res *riqu.QResponse) {
-			err := res.BodyFile(&riqu.TFileOptions{
+			err := res.GetFile(&riqu.TFileOptions{
 				Dir: "downloads",
 				DefaultFilename: "httpbin-image",
 			})

@@ -8,12 +8,12 @@ import (
 func main() {
 	riqu.New().
 		POST("https://httpbin.org/post").
-		BodyForm(riqu.TValue{
+		SetForm(riqu.TValue{
 			"name": "riqu",
 			"version": "1.0",
 		}).
 		OnSuccess(func(res *riqu.QResponse) {
-			text, _ := res.BodyText()
+			text := res.GetText()
 			fmt.Println(text)
 		}).
 		OnError(func(err error) {

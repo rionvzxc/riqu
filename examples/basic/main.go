@@ -10,7 +10,7 @@ func main() {
 		Url("https://httpbin.org/get").
 		Method("GET").
 		OnSuccess(func(res *riqu.QResponse) {
-			text, _ := res.BodyText()
+			text := res.GetText()
 
 			fmt.Println("Status:", res.StatusCode)
 			fmt.Println(text)

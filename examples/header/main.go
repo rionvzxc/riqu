@@ -15,7 +15,7 @@ func main() {
 			"Accept":     {"application/json"},
 		}).
 		OnSuccess(func(res *riqu.QResponse) {
-			text, _ := res.BodyText()
+			text := res.GetText()
 			fmt.Println(text)
 		}).
 		OnError(func(err error) {
