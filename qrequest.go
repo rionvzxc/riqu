@@ -81,10 +81,6 @@ func (this *QRequest) Header(header THeader) *QRequest {
 	this.header = header.Clone()
 	return this
 }
-func (this *QRequest) SetHeader(key string, values ...string) *QRequest {
-	this.header[key] = values
-	return this
-}
 func (this *QRequest) Cookie(cookieMap TValue) *QRequest {
 	this.cookies = nil
 
