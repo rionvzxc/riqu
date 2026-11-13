@@ -211,18 +211,16 @@ func (this *QRequest) handleResponseError(err error) {
 		this.onErrorFunc(err)
 	}
 }
-func (this *QRequest) Send() {
+func (this *QRequest) Send() error {
 	if this.url == "" {
-		this.addConfigError(fmt.Errorf("Request Url is empty"))
+		this.addConfigError(fmt.Errorf("request URL is empty"))
 	}
 	if this.method == "" {
-		this.addConfigError(fmt.Errorf("Request Method is empty"))
+		this.addConfigError(fmt.Errorf("request method is empty"))
 	}
 	if len(this.configErrors) > 0 {
-		fmt.Println("Request Configuration Error:")
-        fmt.Println(errors.Join(this.configErrors...))
-		return
-    }
+		return errors.Join(this.configErrors...)
+	}
 	httpClient := &http.Client{
 		Timeout: this.timeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -248,7 +246,7 @@ func (this *QRequest) Send() {
 
 		if err != nil {
 			this.handleResponseError(err)
-			return
+			return nil
 		}
 		// HEADER - First Request
 		if redirectCount == 0 {
@@ -263,13 +261,13 @@ func (this *QRequest) Send() {
 
 			if err != nil {
 				this.handleResponseError(err)
-				return
+				return nil
 			}
 			currentParsed, err := url.Parse(currentUrl)
 
 			if err != nil {
 				this.handleResponseError(err)
-				return
+				return nil
 			}
 			sameOrigin := strings.EqualFold(previousUrl.Scheme, currentParsed.Scheme) &&
 				strings.EqualFold(previousUrl.Host, currentParsed.Host)
@@ -308,7 +306,7 @@ func (this *QRequest) Send() {
 
 		if err != nil {
 			this.handleResponseError(err)
-			return
+			return nil
 		}
 		qRes := &QResponse{
 			StatusCode:    httpRes.StatusCode,
@@ -330,7 +328,7 @@ func (this *QRequest) Send() {
 			if this.redirect.ResponseMode == VRedirectResponseLast {
 				this.handleResponse(qRes)
 			}
-			return
+			return nil
 		}
 		if this.redirect.ResponseMode == VRedirectResponseLast {
 			qRes.close()
@@ -340,13 +338,13 @@ func (this *QRequest) Send() {
 
 		if err != nil {
 			this.handleResponseError(err)
-			return
+			return nil
 		}
 		currentParsed, err := url.Parse(currentUrl)
 
 		if err != nil {
 			this.handleResponseError(err)
-			return
+			return nil
 		}
 		previousUrl = currentUrl
 		currentUrl = currentParsed.ResolveReference(redirectUrl).String()
