@@ -2,11 +2,16 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/rionvzxc/riqu"
 )
 
 func main() {
-	cookieJar := riqu.NewCookieJar(nil)
+	cookieJar, err := riqu.NewCookieJar(nil)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
 
 	// Set Cookie
 	riqu.New().
@@ -26,7 +31,11 @@ func main() {
 
 	// Get Cookie from Jar
 	fmt.Println("\nCookie Jar:")
-	cookies := cookieJar.GetCookies("https://httpbin.org")
+	cookies, err := cookieJar.Cookies("https://httpbin.org")
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
 
 	for _, cookie := range cookies {
 		fmt.Printf("%s = %s\n", cookie.Name, cookie.Value)
