@@ -77,7 +77,11 @@ func (this *QRequest) PATCH(url string) *QRequest {
 	return this.Url(url).Method("PATCH")
 }
 func (this *QRequest) Header(header THeader) *QRequest {
-	this.header = header.Clone()
+	if header == nil {
+		this.header = make(THeader)
+	} else {
+		this.header = header.Clone()
+	}
 	return this
 }
 func (this *QRequest) Cookie(cookieMap TValue) *QRequest {
