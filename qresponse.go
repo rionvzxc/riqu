@@ -21,27 +21,31 @@ type QResponse struct {
 	bodyRead      bool
 	body io.ReadCloser
 }
-func (this *QResponse) Data() []byte {
+func (this *QResponse) Data() ([]byte, error) {
+	if this == nil {
+		return nil, fmt.Errorf("Response is nil")
+	}
 	if this.bodyRead {
-		return nil
+		return nil, fmt.Errorf("Response body already read")
 	}
 	if this.body == nil {
-		return nil
+		return nil, fmt.Errorf("Response body unavailable")
 	}
 	this.bodyRead = true
 	defer this.body.Close()
-	body, err := io.ReadAll(this.body)
-
-	if err != nil {
-		return nil
-	}
-	return body
+	return io.ReadAll(this.body)
 }
-func (this *QResponse) Text() string {
-	rawData := this.Data()
-	return string(rawData)
+func (this *QResponse) Text() (string, error) {
+	rawData, err := this.Data()
+	if err != nil {
+		return "", err
+	}
+	return string(rawData), nil
 }
 func (this *QResponse) JSON(target any) error {
+	if this == nil {
+		return fmt.Errorf("Response is nil")
+	}
 	if this.bodyRead {
 		return fmt.Errorf("Response body already read")
 	}
@@ -53,44 +57,47 @@ func (this *QResponse) JSON(target any) error {
 	return json.NewDecoder(this.body).Decode(target)
 }
 func (this *QResponse) File(options *TFileOptions) error {
+	if this == nil {
+		return fmt.Errorf("Response is nil")
+	}
 	if this.bodyRead {
 		return fmt.Errorf("Response body already read")
 	}
 	if this.body == nil {
 		return fmt.Errorf("Response body unavailable")
 	}
-	this.bodyRead = true
-	defer this.body.Close()
+	if options == nil {
+		options = &TFileOptions{}
+	}
 	// FILENAME
 	filename := options.Filename
 
 	if filename == "" {
+		_, params, err := mime.ParseMediaType(
+			this.Header.Get("Content-Disposition"),
+		)
+		if err == nil {
+			filename = params["filename"]
+		}
+	}
+	if filename == "" {
 		filename = options.DefaultFilename
+	}
+	if filename == "" {
+		parsedURL, err := url.Parse(this.RequestUrl)
+
+		if err == nil {
+			filename = filepath.Base(parsedURL.Path)
+
+			if filename == "." || filename == "/" {
+				filename = ""
+			}
+		}
 	}
 	if filename == "" {
 		filename = "download"
 	}
-	// FILENAME - CONTENT-DISPOSITION
-	if options.Filename == "" {
-		_, params, err := mime.ParseMediaType(
-			this.Header.Get("Content-Disposition"),
-		)
-		if err == nil && params["filename"] != "" {
-			filename = filepath.Base(params["filename"])
-		}
-	}
-	// FILENAME - REQUEST URL
-	if options.Filename == "" && filename == "download" {
-		parsedURL, err := url.Parse(this.RequestUrl)
-
-		if err == nil {
-			urlFilename := filepath.Base(parsedURL.Path)
-
-			if urlFilename != "." && urlFilename != "/" && urlFilename != "" {
-				filename = urlFilename
-			}
-		}
-	}
+	filename = filepath.Base(filename)
 	// EXTENSION
 	if filepath.Ext(filename) == "" {
 		contentType := this.Header.Get("Content-Type")
@@ -115,11 +122,13 @@ func (this *QResponse) File(options *TFileOptions) error {
 		return err
 	}
 	defer file.Close()
+	this.bodyRead = true
+	defer this.body.Close()
 	_, err = io.Copy(file, this.body)
 	return err
 }
 func (this *QResponse) close() error {
-	if this.body == nil {
+	if this == nil || this.body == nil {
 		return nil
 	}
 	this.bodyRead = true
