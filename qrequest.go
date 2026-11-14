@@ -212,14 +212,18 @@ func (this *QRequest) handleResponseError(err error) {
 	}
 }
 func (this *QRequest) Send() error {
+	var configErrors []error
+	configErrors = append(configErrors, this.configErrors...)
+
 	if this.url == "" {
-		this.addConfigError(fmt.Errorf("request URL is empty"))
+		configErrors = append(configErrors, errors.New("Request Url is empty"))
 	}
 	if this.method == "" {
-		this.addConfigError(fmt.Errorf("request method is empty"))
+		configErrors = append(configErrors, errors.New("Request Method is empty"))
 	}
-	if len(this.configErrors) > 0 {
-		return errors.Join(this.configErrors...)
+	if err := errors.Join(configErrors...); err != nil {
+		this.handleResponseError(err)
+		return err
 	}
 	httpClient := &http.Client{
 		Timeout: this.timeout,
@@ -243,10 +247,9 @@ func (this *QRequest) Send() error {
 			bodyReader = bytes.NewReader(this.body.Data)
 		}
 		httpReq, err := http.NewRequest(currentMethod, currentUrl, bodyReader)
-
 		if err != nil {
 			this.handleResponseError(err)
-			return nil
+			return err
 		}
 		// HEADER - First Request
 		if redirectCount == 0 {
@@ -257,21 +260,21 @@ func (this *QRequest) Send() error {
 			}
 		// HEADER - Redirect
 		} else {
-			previousUrl, err := url.Parse(previousUrl)
+			previousParsed, err := url.Parse(previousUrl)
 
 			if err != nil {
 				this.handleResponseError(err)
-				return nil
+				return err
 			}
 			currentParsed, err := url.Parse(currentUrl)
 
 			if err != nil {
 				this.handleResponseError(err)
-				return nil
+				return err
 			}
-			sameOrigin := strings.EqualFold(previousUrl.Scheme, currentParsed.Scheme) &&
-				strings.EqualFold(previousUrl.Host, currentParsed.Host)
-		
+			sameOrigin := strings.EqualFold(previousParsed.Scheme, currentParsed.Scheme) &&
+				strings.EqualFold(previousParsed.Host, currentParsed.Host)
+
 			if sameOrigin {
 				httpReq.Header = http.Header(this.header.Clone())
 			} else {
@@ -285,7 +288,7 @@ func (this *QRequest) Send() error {
 				}
 				for key, values := range this.header {
 					canonicalKey := http.CanonicalHeaderKey(key)
-		
+
 					if !allowedHeaders[canonicalKey] {
 						continue
 					}
@@ -306,7 +309,7 @@ func (this *QRequest) Send() error {
 
 		if err != nil {
 			this.handleResponseError(err)
-			return nil
+			return err
 		}
 		qRes := &QResponse{
 			StatusCode:    httpRes.StatusCode,
@@ -323,7 +326,7 @@ func (this *QRequest) Send() error {
 		follow := redirectCount < this.redirect.Max &&
 			IsRedirectStatus(httpRes.StatusCode) &&
 			httpRes.Header.Get("Location") != ""
-		
+
 		if !follow {
 			if this.redirect.ResponseMode == VRedirectResponseLast {
 				this.handleResponse(qRes)
@@ -338,13 +341,13 @@ func (this *QRequest) Send() error {
 
 		if err != nil {
 			this.handleResponseError(err)
-			return nil
+			return err
 		}
 		currentParsed, err := url.Parse(currentUrl)
 
 		if err != nil {
 			this.handleResponseError(err)
-			return nil
+			return err
 		}
 		previousUrl = currentUrl
 		currentUrl = currentParsed.ResolveReference(redirectUrl).String()
