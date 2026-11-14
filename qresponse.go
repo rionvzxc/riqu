@@ -33,8 +33,9 @@ func (this *QResponse) Data() ([]byte, error) {
 		return nil, fmt.Errorf("Response body unavailable")
 	}
 	this.bodyRead = true
-	defer this.body.Close()
-	return io.ReadAll(this.body)
+	data, readErr := io.ReadAll(this.body)
+	closeErr := this.body.Close()
+	return data, errors.Join(readErr, closeErr)
 }
 func (this *QResponse) Text() (string, error) {
 	rawData, err := this.Data()
@@ -54,8 +55,9 @@ func (this *QResponse) JSON(target any) error {
 		return fmt.Errorf("Response body unavailable")
 	}
 	this.bodyRead = true
-	defer this.body.Close()
-	return json.NewDecoder(this.body).Decode(target)
+	decodeErr := json.NewDecoder(this.body).Decode(target)
+	closeErr := this.body.Close()
+	return errors.Join(decodeErr, closeErr)
 }
 func (this *QResponse) File(options *TFileOptions) error {
 	if this == nil {
