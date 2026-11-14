@@ -14,12 +14,18 @@ go get github.com/rionvzxc/riqu
 - HTTP request methods: GET, POST, PUT, DELETE, PATCH
 - Custom HTTP methods
 - Custom request headers
-- Raw, Text, JSON, Form, and Multipart request bodies
+- Raw, Text, HTML, JSON, Form, and Multipart request bodies
 - Response handling: Raw, Text, JSON, and File
 - Cookie and Cookie Jar management
 - Automatic redirect handling
 - Request timeout configuration
 - Success and error callbacks
+
+## Request Bodies
+
+`Text()` sets `Content-Type` to `text/plain`, `HTML()` sets it to `text/html`, `JSON()` sets it to `application/json`, and `Form()` sets it to `application/x-www-form-urlencoded`. An explicit `Content-Type` set with `Header()` takes precedence over these defaults. JSON, text, and form bodies are encoded when `Send()` is called.
+
+`FormMultipart()` streams file contents into the request instead of buffering the complete multipart body in memory. The request may use chunked transfer encoding when its content length is unknown. Multipart files are reopened if a redirect requires the body to be sent again.
 
 ## Quick Start
 
