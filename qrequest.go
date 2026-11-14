@@ -133,6 +133,7 @@ func (this *QRequest) Form(formMap TValue) *QRequest {
 	}
 	return this
 }
+
 func (this *QRequest) FormMultipart(formMap TValue, fileMap TValue) *QRequest {
 	var buffer bytes.Buffer
 	writer := multipart.NewWriter(&buffer)
@@ -148,20 +149,26 @@ func (this *QRequest) FormMultipart(formMap TValue, fileMap TValue) *QRequest {
 		file, err := os.Open(path)
 
 		if err != nil {
-			this.addConfigError(err)
+			this.addConfigError(fmt.Errorf("open multipart file %q: %w", path, err))
 			return this
 		}
 		part, err := writer.CreateFormFile(key, filepath.Base(path))
 
 		if err != nil {
-			file.Close()
-			this.addConfigError(err)
+			closeErr := file.Close()
+			this.addConfigError(errors.Join(err, closeErr))
 			return this
 		}
-		_, err = io.Copy(part, file)
-		file.Close()
+		_, copyErr := io.Copy(part, file)
+		closeErr := file.Close()
 
-		if err != nil {
+		if copyErr != nil {
+			copyErr = fmt.Errorf("copy multipart file %q: %w", path, copyErr)
+		}
+		if closeErr != nil {
+			closeErr = fmt.Errorf("close multipart file %q: %w", path, closeErr)
+		}
+		if err := errors.Join(copyErr, closeErr); err != nil {
 			this.addConfigError(err)
 			return this
 		}
