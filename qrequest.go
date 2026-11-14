@@ -177,8 +177,12 @@ func (this *QRequest) FormMultipart(formMap TValue, fileMap TValue) *QRequest {
 	return this
 }
 func (this *QRequest) Timeout(timeout time.Duration) *QRequest {
-	this.timeout = timeout
-	return this
+    if timeout < 0 {
+        this.addConfigError(fmt.Errorf("timeout cannot be negative"))
+        return this
+    }
+    this.timeout = timeout
+    return this
 }
 func (this *QRequest) Redirect(options TRedirect) *QRequest {
 	if options.Max < 0 {
