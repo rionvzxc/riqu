@@ -7,6 +7,54 @@ import (
 	"testing"
 )
 
+func TestNilResponseMethodsReturnErrors(t *testing.T) {
+	var response *QResponse
+
+	if _, err := response.Data(); err == nil {
+		t.Fatal("expected Data on nil response to fail")
+	}
+	if _, err := response.Text(); err == nil {
+		t.Fatal("expected Text on nil response to fail")
+	}
+	if err := response.JSON(nil); err == nil {
+		t.Fatal("expected JSON on nil response to fail")
+	}
+	if err := response.File(nil); err == nil {
+		t.Fatal("expected File on nil response to fail")
+	}
+}
+
+func TestResponseHandlesUnavailableAndEmptyBodies(t *testing.T) {
+	response := &QResponse{}
+	if _, err := response.Data(); err == nil {
+		t.Fatal("expected Data without a body to fail")
+	}
+	if err := response.JSON(nil); err == nil {
+		t.Fatal("expected JSON without a body to fail")
+	}
+	if err := response.File(nil); err == nil {
+		t.Fatal("expected File without a body to fail")
+	}
+
+	response = &QResponse{body: io.NopCloser(strings.NewReader(""))}
+	data, err := response.Data()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data) != 0 {
+		t.Fatalf("expected empty data, got %q", data)
+	}
+	if _, err := response.Data(); err == nil {
+		t.Fatal("expected second body read to fail")
+	}
+
+	response = &QResponse{body: io.NopCloser(strings.NewReader(""))}
+	var jsonData any
+	if err := response.JSON(&jsonData); !errors.Is(err, io.EOF) {
+		t.Fatalf("expected EOF for empty JSON response, got %v", err)
+	}
+}
+
 type testReadCloser struct {
 	io.Reader
 	closeErr   error
