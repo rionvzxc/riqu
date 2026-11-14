@@ -9,19 +9,19 @@ import (
 func main() {
 	riqu.New().
 		POST("https://httpbin.org/post").
-		FormMultipart(
-			riqu.TValue{
-				"name":    "riqu",
-				"version": "1.0",
-				"type":    "multipart",
+		FormMultipart(riqu.TMultipart{
+			Form: riqu.TValues{
+				"name":    {"riqu"},
+				"version": {"1.0"},
+				"type":    {"multipart"},
 			},
-			riqu.TValue{
-				"samplefile": "examples/multipart/sample.txt",
+			File: riqu.TValues{
+				"samplefile": {"examples/multipart/sample.txt"},
 			},
-		).
+		}).
 		OnSuccess(func(res *riqu.QResponse) {
 			text, err := res.Text()
-			
+
 			if err != nil {
 				fmt.Println("Error:", err)
 				return

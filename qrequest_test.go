@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -32,7 +33,7 @@ func TestSendPreservesCookieOnSameOriginRedirect(t *testing.T) {
 	var responseBody string
 	var responseErr error
 	err := New().GET(server.URL + "/start").
-		Cookie(TValue{"session": "secret"}).
+		Cookie(TValues{"session": {"secret"}}).
 		OnSuccess(func(res *QResponse) {
 			responseBody, responseErr = res.Text()
 		}).
@@ -71,7 +72,7 @@ func TestSendDoesNotRestoreSensitiveHeadersAfterCrossOriginRedirect(t *testing.T
 	var responseErr error
 	err := New().GET(serverA.URL + "/start").
 		Header(THeader{"Authorization": []string{"Bearer secret"}}).
-		Cookie(TValue{"session": "secret"}).
+		Cookie(TValues{"session": {"secret"}}).
 		OnSuccess(func(res *QResponse) {
 			responseBody, responseErr = res.Text()
 		}).
@@ -146,7 +147,7 @@ func TestSendUsesBodyContentType(t *testing.T) {
 		},
 		{
 			name:        "JSON",
-			configure:   func(request *QRequest) { request.JSON(TValue{"name": "riqu"}) },
+			configure:   func(request *QRequest) { request.JSON(TValues{"name": {"riqu"}}) },
 			contentType: "application/json",
 		},
 	}
@@ -204,7 +205,7 @@ func TestBodySerializationIsDeferredUntilSend(t *testing.T) {
 	if len(request.body.Data) != 0 {
 		t.Fatal("Text body was converted to bytes before Send")
 	}
-	request.Form(TValue{"name": "riqu"})
+	request.Form(TValues{"name": {"riqu"}})
 	if len(request.body.Data) != 0 {
 		t.Fatal("Form body was encoded before Send")
 	}
@@ -248,13 +249,14 @@ func TestMultipartStreamsAndReplaysFilesOn307(t *testing.T) {
 		contentType      string
 		contentLength    int64
 		transferEncoding []string
-		field            string
+		fields           []string
 		fileContent      string
 		err              error
 	}
 
 	contents := strings.Repeat("streamed multipart content\n", 8192)
 	filePath := filepath.Join(t.TempDir(), "sample.txt")
+
 	if err := os.WriteFile(filePath, []byte(contents), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -267,9 +269,11 @@ func TestMultipartStreamsAndReplaysFilesOn307(t *testing.T) {
 			transferEncoding: append([]string(nil), request.TransferEncoding...),
 		}
 		result.err = request.ParseMultipartForm(1024)
+
 		if result.err == nil {
-			result.field = request.FormValue("name")
+			result.fields = append([]string(nil), request.MultipartForm.Value["name"]...)
 			file, _, err := request.FormFile("upload")
+
 			if err != nil {
 				result.err = err
 			} else {
@@ -283,6 +287,7 @@ func TestMultipartStreamsAndReplaysFilesOn307(t *testing.T) {
 			}
 		}
 		results <- result
+
 		if request.URL.Path == "/start" {
 			http.Redirect(w, request, "/final", http.StatusTemporaryRedirect)
 			return
@@ -294,13 +299,17 @@ func TestMultipartStreamsAndReplaysFilesOn307(t *testing.T) {
 	const contentType = "multipart/form-data; boundary=riqu-test-boundary"
 	var responseBody string
 	var responseErr error
-	err := New().POST(server.URL+"/start").
+	err := New().POST(server.URL + "/start").
 		Header(THeader{"Content-Type": []string{contentType}}).
-		FormMultipart(TValue{"name": "riqu"}, TValue{"upload": filePath}).
+		FormMultipart(TMultipart{
+			Form: TValues{"name": {"riqu", "second"}},
+			File: TValues{"upload": {filePath}},
+		}).
 		OnSuccess(func(response *QResponse) {
 			responseBody, responseErr = response.Text()
 		}).
 		Send()
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -312,6 +321,7 @@ func TestMultipartStreamsAndReplaysFilesOn307(t *testing.T) {
 	}
 	for _, expectedPath := range []string{"/start", "/final"} {
 		result := <-results
+
 		if result.path != expectedPath {
 			t.Fatalf("expected request to %q, got %q", expectedPath, result.path)
 		}
@@ -324,7 +334,7 @@ func TestMultipartStreamsAndReplaysFilesOn307(t *testing.T) {
 		if result.contentLength != -1 || len(result.transferEncoding) == 0 {
 			t.Fatalf("expected streamed request with unknown length, got length %d and transfer encoding %v", result.contentLength, result.transferEncoding)
 		}
-		if result.field != "riqu" || result.fileContent != contents {
+		if !reflect.DeepEqual(result.fields, []string{"riqu", "second"}) || result.fileContent != contents {
 			t.Fatalf("multipart data was not replayed correctly for %q", result.path)
 		}
 	}
@@ -339,7 +349,9 @@ func TestMultipartMissingFileReturnsSendError(t *testing.T) {
 
 	var callbackErr error
 	request := New().POST(server.URL).
-		FormMultipart(nil, TValue{"upload": filepath.Join(t.TempDir(), "missing.txt")}).
+		FormMultipart(TMultipart{
+			File: TValues{"upload": {filepath.Join(t.TempDir(), "missing.txt")}},
+		}).
 		OnError(func(err error) {
 			callbackErr = err
 		})
@@ -497,7 +509,7 @@ func TestSendAcceptsNilAndEmptyBodies(t *testing.T) {
 		},
 		{
 			name:              "nil multipart maps",
-			configure:         func(request *QRequest) { request.FormMultipart(nil, nil) },
+			configure:         func(request *QRequest) { request.FormMultipart(TMultipart{}) },
 			contentType:       "multipart/form-data; boundary=",
 			contentTypePrefix: true,
 			checkBody: func(request *http.Request) error {
@@ -563,7 +575,7 @@ func TestSendClearsNilHeadersAndCookies(t *testing.T) {
 	err := New().GET(server.URL).
 		Header(THeader{"X-Test": []string{"value"}}).
 		Header(nil).
-		Cookie(TValue{"session": "secret"}).
+		Cookie(TValues{"session": {"secret"}}).
 		Cookie(nil).
 		Send()
 	if err != nil {

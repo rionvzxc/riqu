@@ -17,21 +17,6 @@ import (
 	"time"
 )
 
-type QRequest struct {
-	url      string
-	method   string
-	header   http.Header
-	cookies  []*http.Cookie
-    cookieJar *QCookieJar
-	body     TBody
-	bodyKind  requestBodyKind
-	bodyValue any
-	timeout  time.Duration
-	redirect TRedirect
-
-	onSuccessFunc func(*QResponse)
-	onErrorFunc func(error)
-}
 type requestBodyKind uint
 
 const (
@@ -43,29 +28,41 @@ const (
 	requestBodyMultipart
 )
 
-type multipartBody struct {
-	fields TValue
-	files  TValue
-}
-
-type preparedBody struct {
-	data        []byte
-	contentType string
-	multipart   *multipartBody
-}
 const (
 	VRedirectResponseAll TRedirectResponseMode = iota
 	VRedirectResponseLast
 )
+
+type preparedBody struct {
+	data        []byte
+	contentType string
+	multipart   *TMultipart
+}
+type QRequest struct {
+	url       string
+	method    string
+	header    THeader
+	cookies   []*http.Cookie
+	cookieJar *QCookieJar
+	body      TBody
+	bodyKind  requestBodyKind
+	bodyValue any
+	timeout   time.Duration
+	redirect  TRedirect
+
+	onSuccessFunc func(*QResponse)
+	onErrorFunc   func(error)
+}
+
 // Constructor
 func New() *QRequest {
 	return &QRequest{
 		method:  "GET",
-		header:  http.Header{},
-		cookies:  []*http.Cookie{},
+		header:  THeader{},
+		cookies: []*http.Cookie{},
 		timeout: 10 * time.Second,
 		redirect: TRedirect{
-			Max:  10,
+			Max:          10,
 			ResponseMode: VRedirectResponseLast,
 		},
 	}
@@ -103,50 +100,20 @@ func (this *QRequest) Header(header THeader) *QRequest {
 	}
 	return this
 }
-func (this *QRequest) Cookie(cookieMap TValue) *QRequest {
+func (this *QRequest) Cookie(cookieMap TValues) *QRequest {
 	this.cookies = nil
 
-	for key, val := range cookieMap {
+	for key := range cookieMap {
 		this.cookies = append(this.cookies, &http.Cookie{
 			Name:  key,
-			Value: val,
+			Value: cookieMap.Get(key),
 		})
 	}
 	return this
 }
 func (this *QRequest) CookieJar(cookieJar *QCookieJar) *QRequest {
 	this.cookieJar = cookieJar
-    return this
-}
-func cloneValues(values TValue) TValue {
-	if values == nil {
-		return nil
-	}
-	cloned := make(TValue, len(values))
-	for key, value := range values {
-		cloned[key] = value
-	}
-	return cloned
-}
-func hasHeader(header http.Header, name string) bool {
-	for key := range header {
-		if strings.EqualFold(key, name) {
-			return true
-		}
-	}
-	return false
-}
-func getHeaderValue(header http.Header, name string) (string, bool) {
-	for key, values := range header {
-		if !strings.EqualFold(key, name) {
-			continue
-		}
-		if len(values) == 0 {
-			return "", true
-		}
-		return values[0], true
-	}
-	return "", false
+	return this
 }
 func (this *QRequest) Data(data []byte) *QRequest {
 	this.body = TBody{
@@ -180,53 +147,59 @@ func (this *QRequest) JSON(jsonData any) *QRequest {
 	this.bodyValue = jsonData
 	return this
 }
-func (this *QRequest) Form(formMap TValue) *QRequest {
+func (this *QRequest) Form(formMap TValues) *QRequest {
 	this.body = TBody{
 		ContentType: "application/x-www-form-urlencoded",
 	}
 	this.bodyKind = requestBodyForm
-	this.bodyValue = cloneValues(formMap)
+	this.bodyValue = formMap.Clone()
 	return this
 }
 
-func (this *QRequest) FormMultipart(formMap TValue, fileMap TValue) *QRequest {
+func (this *QRequest) FormMultipart(multipart TMultipart) *QRequest {
 	this.body = TBody{}
 	this.bodyKind = requestBodyMultipart
-	this.bodyValue = multipartBody{
-		fields: cloneValues(formMap),
-		files:  cloneValues(fileMap),
+	this.bodyValue = TMultipart{
+		Form: multipart.Form.Clone(),
+		File: multipart.File.Clone(),
 	}
 	return this
 }
 func (this *QRequest) prepareBody() (preparedBody, error) {
 	prepared := preparedBody{contentType: this.body.ContentType}
+
 	switch this.bodyKind {
 	case requestBodyData:
 		prepared.data = this.body.Data
 	case requestBodyText, requestBodyHTML:
 		value, ok := this.bodyValue.(string)
+
 		if !ok {
 			return preparedBody{}, errors.New("Invalid request body")
 		}
 		prepared.data = []byte(value)
 	case requestBodyJSON:
 		data, err := json.Marshal(this.bodyValue)
+
 		if err != nil {
 			return preparedBody{}, err
 		}
 		prepared.data = data
 	case requestBodyForm:
-		formMap, ok := this.bodyValue.(TValue)
+		formMap, ok := this.bodyValue.(TValues)
+
 		if !ok {
 			return preparedBody{}, errors.New("Invalid form body")
 		}
 		form := url.Values{}
+
 		for key, value := range formMap {
-			form.Set(key, value)
+			form[key] = append([]string(nil), value...)
 		}
 		prepared.data = []byte(form.Encode())
 	case requestBodyMultipart:
-		formData, ok := this.bodyValue.(multipartBody)
+		formData, ok := this.bodyValue.(TMultipart)
+
 		if !ok {
 			return preparedBody{}, errors.New("Invalid multipart body")
 		}
@@ -236,12 +209,15 @@ func (this *QRequest) prepareBody() (preparedBody, error) {
 	}
 	return prepared, nil
 }
-func (this *QRequest) multipartBodyReader(formData multipartBody) (io.ReadCloser, string, error) {
+func (this *QRequest) multipartBodyReader(formData TMultipart) (io.ReadCloser, string, error) {
 	pipeReader, pipeWriter := io.Pipe()
 	writer := multipart.NewWriter(pipeWriter)
-	contentType, hasContentType := getHeaderValue(this.header, "Content-Type")
+	contentType := this.header.Get("Content-Type")
+	hasContentType := this.header.Exist("Content-Type")
+
 	if hasContentType {
 		mediaType, params, err := mime.ParseMediaType(contentType)
+
 		if err == nil && strings.EqualFold(mediaType, "multipart/form-data") && params["boundary"] != "" {
 			if err := writer.SetBoundary(params["boundary"]); err != nil {
 				pipeReader.Close()
@@ -255,34 +231,48 @@ func (this *QRequest) multipartBodyReader(formData multipartBody) (io.ReadCloser
 
 	go func() {
 		var writeErr error
-		for key, value := range formData.fields {
-			if err := writer.WriteField(key, value); err != nil {
-				writeErr = err
+
+		for key, values := range formData.Form {
+			for _, value := range values {
+				if err := writer.WriteField(key, value); err != nil {
+					writeErr = err
+					break
+				}
+			}
+			if writeErr != nil {
 				break
 			}
 		}
 		if writeErr == nil {
-			for key, path := range formData.files {
-				file, err := os.Open(path)
-				if err != nil {
-					writeErr = fmt.Errorf("open multipart file %q: %w", path, err)
-					break
+			for key, paths := range formData.File {
+				for _, path := range paths {
+					file, err := os.Open(path)
+
+					if err != nil {
+						writeErr = fmt.Errorf("open multipart file %q: %w", path, err)
+						break
+					}
+					part, err := writer.CreateFormFile(key, filepath.Base(path))
+
+					if err != nil {
+						writeErr = errors.Join(fmt.Errorf("create multipart file %q: %w", path, err), file.Close())
+						break
+					}
+					_, copyErr := io.Copy(part, file)
+					closeErr := file.Close()
+
+					if copyErr != nil {
+						copyErr = fmt.Errorf("copy multipart file %q: %w", path, copyErr)
+					}
+					if closeErr != nil {
+						closeErr = fmt.Errorf("close multipart file %q: %w", path, closeErr)
+					}
+					if err := errors.Join(copyErr, closeErr); err != nil {
+						writeErr = err
+						break
+					}
 				}
-				part, err := writer.CreateFormFile(key, filepath.Base(path))
-				if err != nil {
-					writeErr = errors.Join(fmt.Errorf("create multipart file %q: %w", path, err), file.Close())
-					break
-				}
-				_, copyErr := io.Copy(part, file)
-				closeErr := file.Close()
-				if copyErr != nil {
-					copyErr = fmt.Errorf("copy multipart file %q: %w", path, copyErr)
-				}
-				if closeErr != nil {
-					closeErr = fmt.Errorf("close multipart file %q: %w", path, closeErr)
-				}
-				if err := errors.Join(copyErr, closeErr); err != nil {
-					writeErr = err
+				if writeErr != nil {
 					break
 				}
 			}
@@ -300,7 +290,7 @@ func (this *QRequest) multipartBodyReader(formData multipartBody) (io.ReadCloser
 }
 func (this *QRequest) Timeout(timeout time.Duration) *QRequest {
 	this.timeout = timeout
-    return this
+	return this
 }
 func (this *QRequest) Redirect(options TRedirect) *QRequest {
 	this.redirect = options
@@ -320,6 +310,7 @@ func (this *QRequest) handleResponse(response *QResponse) (err error) {
 			err = response.close()
 		}
 	}()
+
 	if this.onSuccessFunc != nil {
 		this.onSuccessFunc(response)
 	}
@@ -332,6 +323,7 @@ func (this *QRequest) handleResponseError(err error) {
 }
 func (this *QRequest) Send() error {
 	var configErrors []error
+
 	if this.timeout < 0 {
 		configErrors = append(configErrors, errors.New("timeout cannot be negative"))
 	}
@@ -341,7 +333,6 @@ func (this *QRequest) Send() error {
 	if this.redirect.ResponseMode > VRedirectResponseLast {
 		configErrors = append(configErrors, errors.New("Invalid redirect response mode"))
 	}
-
 	if this.url == "" {
 		configErrors = append(configErrors, errors.New("Request Url is empty"))
 	}
@@ -353,11 +344,13 @@ func (this *QRequest) Send() error {
 		return err
 	}
 	preparedBody, err := this.prepareBody()
+
 	if err != nil {
 		this.handleResponseError(err)
 		return err
 	}
 	requestContext := context.Background()
+
 	if this.timeout > 0 {
 		var cancel context.CancelFunc
 		requestContext, cancel = context.WithTimeout(requestContext, this.timeout)
@@ -368,10 +361,12 @@ func (this *QRequest) Send() error {
 			return http.ErrUseLastResponse
 		},
 	}
+
 	if this.cookieJar != nil {
 		httpClient.Jar = this.cookieJar.jar
 	}
 	initialUrl, err := url.Parse(this.url)
+
 	if err != nil {
 		this.handleResponseError(err)
 		return err
@@ -389,6 +384,7 @@ func (this *QRequest) Send() error {
 		if currentMethod != "GET" && currentMethod != "HEAD" {
 			if preparedBody.multipart != nil {
 				multipartReader, contentType, err := this.multipartBodyReader(*preparedBody.multipart)
+
 				if err != nil {
 					this.handleResponseError(err)
 					return err
@@ -401,6 +397,7 @@ func (this *QRequest) Send() error {
 			}
 		}
 		httpReq, err := http.NewRequestWithContext(requestContext, currentMethod, currentUrl, bodyReader)
+
 		if err != nil {
 			if bodyCloser != nil {
 				bodyCloser.Close()
@@ -415,7 +412,7 @@ func (this *QRequest) Send() error {
 			for _, cookie := range this.cookies {
 				httpReq.AddCookie(cookie)
 			}
-		// HEADER - Redirect
+			// HEADER - Redirect
 		} else {
 			currentParsed, err := url.Parse(currentUrl)
 
@@ -428,6 +425,7 @@ func (this *QRequest) Send() error {
 
 			if sameOrigin {
 				httpReq.Header = http.Header(this.header.Clone())
+
 				for _, cookie := range this.cookies {
 					httpReq.AddCookie(cookie)
 				}
@@ -440,6 +438,7 @@ func (this *QRequest) Send() error {
 					"Pragma":          true,
 					"Content-Type":    true,
 				}
+
 				for key, values := range this.header {
 					canonicalKey := http.CanonicalHeaderKey(key)
 
@@ -455,7 +454,7 @@ func (this *QRequest) Send() error {
 		// HEADER - Content-Type
 		if bodyReader == nil {
 			httpReq.Header.Del("Content-Type")
-		} else if !hasHeader(this.header, "Content-Type") && bodyContentType != "" {
+		} else if !this.header.Exist("Content-Type") && bodyContentType != "" {
 			httpReq.Header.Set("Content-Type", bodyContentType)
 		}
 		// RESPONSE
@@ -474,6 +473,7 @@ func (this *QRequest) Send() error {
 			RequestMethod: currentMethod,
 			body:          httpRes.Body,
 		}
+
 		if this.redirect.ResponseMode == VRedirectResponseAll {
 			if err := this.handleResponse(qRes); err != nil {
 				this.handleResponseError(err)

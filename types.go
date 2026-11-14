@@ -6,13 +6,11 @@ import (
 )
 
 type TMap = map[string]any
-type TValue map[string]string
 type TJarOptions = cookiejar.Options
-type THeader = http.Header
 type TCookie = http.Cookie
 type TRedirectResponseMode uint
 type TRedirect struct {
-	Max  int
+	Max          int
 	ResponseMode TRedirectResponseMode
 }
 type TBody struct {
@@ -23,4 +21,8 @@ type TFileOptions struct {
 	Dir             string
 	Filename        string
 	DefaultFilename string
+}
+type TMultipart struct {
+	Form TValues
+	File TValues
 }
