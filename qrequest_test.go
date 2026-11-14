@@ -126,6 +126,120 @@ func TestSendValidatesCurrentConfiguration(t *testing.T) {
 	}
 }
 
+func TestSendUsesBodyContentType(t *testing.T) {
+	tests := []struct {
+		name        string
+		configure   func(*QRequest)
+		contentType string
+	}{
+		{
+			name:        "text",
+			configure:   func(request *QRequest) { request.Text("plain text") },
+			contentType: "text/plain",
+		},
+		{
+			name:        "HTML",
+			configure:   func(request *QRequest) { request.HTML("<p>html</p>") },
+			contentType: "text/html",
+		},
+		{
+			name:        "JSON",
+			configure:   func(request *QRequest) { request.JSON(TValue{"name": "riqu"}) },
+			contentType: "application/json",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			contentType := make(chan string, 1)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+				contentType <- request.Header.Get("Content-Type")
+				fmt.Fprint(w, "ok")
+			}))
+			defer server.Close()
+
+			request := New().POST(server.URL)
+			test.configure(request)
+			if err := request.Send(); err != nil {
+				t.Fatal(err)
+			}
+			if actual := <-contentType; actual != test.contentType {
+				t.Fatalf("expected Content-Type %q, got %q", test.contentType, actual)
+			}
+		})
+	}
+}
+
+func TestHeaderContentTypeOverridesBodyContentType(t *testing.T) {
+	for _, headerFirst := range []bool{false, true} {
+		t.Run(fmt.Sprintf("header first=%t", headerFirst), func(t *testing.T) {
+			contentType := make(chan string, 1)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+				contentType <- request.Header.Get("Content-Type")
+				fmt.Fprint(w, "ok")
+			}))
+			defer server.Close()
+
+			request := New().POST(server.URL)
+			if headerFirst {
+				request.Header(THeader{"Content-Type": []string{"application/custom"}}).Text("plain text")
+			} else {
+				request.Text("plain text").Header(THeader{"Content-Type": []string{"application/custom"}})
+			}
+			if err := request.Send(); err != nil {
+				t.Fatal(err)
+			}
+			if actual := <-contentType; actual != "application/custom" {
+				t.Fatalf("expected explicit Content-Type to win, got %q", actual)
+			}
+		})
+	}
+}
+
+func TestBodySerializationIsDeferredUntilSend(t *testing.T) {
+	request := New().POST("http://example.test").
+		Text("plain text")
+	if len(request.body.Data) != 0 {
+		t.Fatal("Text body was converted to bytes before Send")
+	}
+	request.Form(TValue{"name": "riqu"})
+	if len(request.body.Data) != 0 {
+		t.Fatal("Form body was encoded before Send")
+	}
+	request.HTML("<p>html</p>")
+	if len(request.body.Data) != 0 {
+		t.Fatal("HTML body was converted to bytes before Send")
+	}
+}
+
+type countingJSONMarshaler struct {
+	calls *int
+}
+
+func (this countingJSONMarshaler) MarshalJSON() ([]byte, error) {
+	*this.calls++
+	return []byte(`{"value":"sent"}`), nil
+}
+
+func TestJSONMarshalingIsDeferredUntilSend(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.Copy(w, r.Body)
+	}))
+	defer server.Close()
+
+	calls := 0
+	request := New().POST(server.URL).JSON(countingJSONMarshaler{calls: &calls})
+	if calls != 0 {
+		t.Fatal("JSON was marshaled before Send")
+	}
+	if err := request.Send(); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 {
+		t.Fatalf("expected JSON to be marshaled once in Send, got %d calls", calls)
+	}
+}
+
 func TestSendRejectsInvalidConfiguration(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -223,7 +337,8 @@ func TestSendAcceptsNilAndEmptyBodies(t *testing.T) {
 			},
 		},
 		{
-			name: "empty text",
+			name:        "empty text",
+			contentType: "text/plain",
 			configure: func(request *QRequest) {
 				request.Text("")
 			},

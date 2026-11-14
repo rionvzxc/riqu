@@ -23,12 +23,33 @@ type QRequest struct {
 	cookies  []*http.Cookie
     cookieJar *QCookieJar
 	body     TBody
-	bodyError error
+	bodyKind  requestBodyKind
+	bodyValue any
 	timeout  time.Duration
 	redirect TRedirect
 
 	onSuccessFunc func(*QResponse)
 	onErrorFunc func(error)
+}
+type requestBodyKind uint
+
+const (
+	requestBodyData requestBodyKind = iota
+	requestBodyText
+	requestBodyHTML
+	requestBodyJSON
+	requestBodyForm
+	requestBodyMultipart
+)
+
+type multipartBody struct {
+	fields TValue
+	files  TValue
+}
+
+type preparedBody struct {
+	data        []byte
+	contentType string
 }
 const (
 	VRedirectResponseAll TRedirectResponseMode = iota
@@ -95,95 +116,143 @@ func (this *QRequest) CookieJar(cookieJar *QCookieJar) *QRequest {
 	this.cookieJar = cookieJar
     return this
 }
+func cloneValues(values TValue) TValue {
+	if values == nil {
+		return nil
+	}
+	cloned := make(TValue, len(values))
+	for key, value := range values {
+		cloned[key] = value
+	}
+	return cloned
+}
+func hasHeader(header http.Header, name string) bool {
+	for key := range header {
+		if strings.EqualFold(key, name) {
+			return true
+		}
+	}
+	return false
+}
 func (this *QRequest) Data(data []byte) *QRequest {
-	this.bodyError = nil
 	this.body = TBody{
 		Data: data,
 	}
+	this.bodyKind = requestBodyData
+	this.bodyValue = nil
 	return this
 }
 func (this *QRequest) Text(text string) *QRequest {
-	return this.Data([]byte(text))
+	this.body = TBody{
+		ContentType: "text/plain",
+	}
+	this.bodyKind = requestBodyText
+	this.bodyValue = text
+	return this
+}
+func (this *QRequest) HTML(html string) *QRequest {
+	this.body = TBody{
+		ContentType: "text/html",
+	}
+	this.bodyKind = requestBodyHTML
+	this.bodyValue = html
+	return this
 }
 func (this *QRequest) JSON(jsonData any) *QRequest {
-	this.body = TBody{}
-	this.bodyError = nil
-	data, err := json.Marshal(jsonData)
-
-	if err != nil {
-		this.bodyError = err
-		return this
-	}
 	this.body = TBody{
-		Data:        data,
 		ContentType: "application/json",
 	}
+	this.bodyKind = requestBodyJSON
+	this.bodyValue = jsonData
 	return this
 }
 func (this *QRequest) Form(formMap TValue) *QRequest {
-	this.bodyError = nil
-	form := url.Values{}
-
-	for key, val := range formMap {
-		form.Set(key, val)
-	}
 	this.body = TBody{
-		Data:        []byte(form.Encode()),
 		ContentType: "application/x-www-form-urlencoded",
 	}
+	this.bodyKind = requestBodyForm
+	this.bodyValue = cloneValues(formMap)
 	return this
 }
 
 func (this *QRequest) FormMultipart(formMap TValue, fileMap TValue) *QRequest {
 	this.body = TBody{}
-	this.bodyError = nil
-	var buffer bytes.Buffer
-	writer := multipart.NewWriter(&buffer)
-	// TEXT FIELDS
-	for key, val := range formMap {
-		if err := writer.WriteField(key, val); err != nil {
-			this.bodyError = err
-			return this
-		}
-	}
-	// FILE FIELDS
-	for key, path := range fileMap {
-		file, err := os.Open(path)
-
-		if err != nil {
-			this.bodyError = fmt.Errorf("open multipart file %q: %w", path, err)
-			return this
-		}
-		part, err := writer.CreateFormFile(key, filepath.Base(path))
-
-		if err != nil {
-			closeErr := file.Close()
-			this.bodyError = errors.Join(err, closeErr)
-			return this
-		}
-		_, copyErr := io.Copy(part, file)
-		closeErr := file.Close()
-
-		if copyErr != nil {
-			copyErr = fmt.Errorf("copy multipart file %q: %w", path, copyErr)
-		}
-		if closeErr != nil {
-			closeErr = fmt.Errorf("close multipart file %q: %w", path, closeErr)
-		}
-		if err := errors.Join(copyErr, closeErr); err != nil {
-			this.bodyError = err
-			return this
-		}
-	}
-	if err := writer.Close(); err != nil {
-		this.bodyError = err
-		return this
-	}
-	this.body = TBody{
-		Data:        buffer.Bytes(),
-		ContentType: writer.FormDataContentType(),
+	this.bodyKind = requestBodyMultipart
+	this.bodyValue = multipartBody{
+		fields: cloneValues(formMap),
+		files:  cloneValues(fileMap),
 	}
 	return this
+}
+func (this *QRequest) prepareBody() (preparedBody, error) {
+	prepared := preparedBody{contentType: this.body.ContentType}
+	switch this.bodyKind {
+	case requestBodyData:
+		prepared.data = this.body.Data
+	case requestBodyText, requestBodyHTML:
+		value, ok := this.bodyValue.(string)
+		if !ok {
+			return preparedBody{}, errors.New("Invalid request body")
+		}
+		prepared.data = []byte(value)
+	case requestBodyJSON:
+		data, err := json.Marshal(this.bodyValue)
+		if err != nil {
+			return preparedBody{}, err
+		}
+		prepared.data = data
+	case requestBodyForm:
+		formMap, ok := this.bodyValue.(TValue)
+		if !ok {
+			return preparedBody{}, errors.New("Invalid form body")
+		}
+		form := url.Values{}
+		for key, value := range formMap {
+			form.Set(key, value)
+		}
+		prepared.data = []byte(form.Encode())
+	case requestBodyMultipart:
+		formData, ok := this.bodyValue.(multipartBody)
+		if !ok {
+			return preparedBody{}, errors.New("Invalid multipart body")
+		}
+		var buffer bytes.Buffer
+		writer := multipart.NewWriter(&buffer)
+		for key, value := range formData.fields {
+			if err := writer.WriteField(key, value); err != nil {
+				return preparedBody{}, err
+			}
+		}
+		for key, path := range formData.files {
+			file, err := os.Open(path)
+			if err != nil {
+				return preparedBody{}, fmt.Errorf("open multipart file %q: %w", path, err)
+			}
+			part, err := writer.CreateFormFile(key, filepath.Base(path))
+			if err != nil {
+				return preparedBody{}, errors.Join(err, file.Close())
+			}
+			_, copyErr := io.Copy(part, file)
+			closeErr := file.Close()
+			if copyErr != nil {
+				copyErr = fmt.Errorf("copy multipart file %q: %w", path, copyErr)
+			}
+			if closeErr != nil {
+				closeErr = fmt.Errorf("close multipart file %q: %w", path, closeErr)
+			}
+			if err := errors.Join(copyErr, closeErr); err != nil {
+				return preparedBody{}, err
+			}
+		}
+		if err := writer.Close(); err != nil {
+			return preparedBody{}, err
+		}
+		prepared.data = buffer.Bytes()
+		prepared.contentType = writer.FormDataContentType()
+	default:
+		return preparedBody{}, errors.New("Invalid request body type")
+	}
+	return prepared, nil
 }
 func (this *QRequest) Timeout(timeout time.Duration) *QRequest {
 	this.timeout = timeout
@@ -219,9 +288,6 @@ func (this *QRequest) handleResponseError(err error) {
 }
 func (this *QRequest) Send() error {
 	var configErrors []error
-	if this.bodyError != nil {
-		configErrors = append(configErrors, this.bodyError)
-	}
 	if this.timeout < 0 {
 		configErrors = append(configErrors, errors.New("timeout cannot be negative"))
 	}
@@ -239,6 +305,11 @@ func (this *QRequest) Send() error {
 		configErrors = append(configErrors, errors.New("Request Method is empty"))
 	}
 	if err := errors.Join(configErrors...); err != nil {
+		this.handleResponseError(err)
+		return err
+	}
+	preparedBody, err := this.prepareBody()
+	if err != nil {
 		this.handleResponseError(err)
 		return err
 	}
@@ -270,7 +341,7 @@ func (this *QRequest) Send() error {
 		var bodyReader io.Reader
 
 		if currentMethod != "GET" && currentMethod != "HEAD" {
-			bodyReader = bytes.NewReader(this.body.Data)
+			bodyReader = bytes.NewReader(preparedBody.data)
 		}
 		httpReq, err := http.NewRequestWithContext(requestContext, currentMethod, currentUrl, bodyReader)
 		if err != nil {
@@ -322,10 +393,10 @@ func (this *QRequest) Send() error {
 			}
 		}
 		// HEADER - Content-Type
-		if bodyReader != nil && this.body.ContentType != "" {
-			httpReq.Header.Set("Content-Type", this.body.ContentType)
-		} else if bodyReader == nil {
+		if bodyReader == nil {
 			httpReq.Header.Del("Content-Type")
+		} else if !hasHeader(this.header, "Content-Type") && preparedBody.contentType != "" {
+			httpReq.Header.Set("Content-Type", preparedBody.contentType)
 		}
 		// RESPONSE
 		httpRes, err := httpClient.Do(httpReq)
