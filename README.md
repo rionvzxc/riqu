@@ -66,6 +66,7 @@ Runnable examples are available in the repository:
 | [post_form](https://github.com/rionvzxc/riqu/tree/main/examples/post_form) | Form URL-encoded request |
 | [multipart](https://github.com/rionvzxc/riqu/tree/main/examples/multipart) | Multipart form and file upload |
 | [download](https://github.com/rionvzxc/riqu/tree/main/examples/download) | Download files |
+| [redirect](https://github.com/rionvzxc/riqu/tree/main/examples/redirect) | Follow an HTTP redirect |
 | [timeout](https://github.com/rionvzxc/riqu/tree/main/examples/timeout) | Request timeout and error handling |
 
 To run an example, clone the repository and execute:
