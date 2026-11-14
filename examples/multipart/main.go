@@ -20,8 +20,12 @@ func main() {
 			},
 		).
 		OnSuccess(func(res *riqu.QResponse) {
-			text := res.Text()
-
+			text, err := res.Text()
+			
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
 			fmt.Println("Status:", res.StatusCode)
 			fmt.Println(text)
 		}).

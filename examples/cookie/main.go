@@ -18,11 +18,15 @@ func main() {
 		CookieJar(cookieJar).
 		GET("https://httpbin.org/cookies/set?session_id=abc123456&username=riqu").
 		OnSuccess(func(res *riqu.QResponse) {
-			body := res.Text()
+			text, err := res.Text()
 
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
 			fmt.Println("Response:")
 			fmt.Println("Status:", res.StatusCode)
-			fmt.Println(body)
+			fmt.Println(text)
 		}).
 		OnError(func(err error) {
 			fmt.Println("Error:", err)

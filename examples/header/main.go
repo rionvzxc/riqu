@@ -15,7 +15,12 @@ func main() {
 			"Accept":     {"application/json"},
 		}).
 		OnSuccess(func(res *riqu.QResponse) {
-			text := res.Text()
+			text, err := res.Text()
+			
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
 			fmt.Println(text)
 		}).
 		OnError(func(err error) {
