@@ -22,9 +22,9 @@ type QRequest struct {
 	cookies  []*http.Cookie
     cookieJar *QCookieJar
 	body     TBody
+	bodyError error
 	timeout  time.Duration
 	redirect TRedirect
-	configErrors   []error
 
 	onSuccessFunc func(*QResponse)
 	onErrorFunc func(error)
@@ -44,11 +44,6 @@ func New() *QRequest {
 			Max:  10,
 			ResponseMode: VRedirectResponseLast,
 		},
-	}
-}
-func (this *QRequest) addConfigError(err error) {
-	if err != nil {
-		this.configErrors = append(this.configErrors, err)
 	}
 }
 func (this *QRequest) Url(url string) *QRequest {
@@ -100,6 +95,7 @@ func (this *QRequest) CookieJar(cookieJar *QCookieJar) *QRequest {
     return this
 }
 func (this *QRequest) Data(data []byte) *QRequest {
+	this.bodyError = nil
 	this.body = TBody{
 		Data: data,
 	}
@@ -109,10 +105,12 @@ func (this *QRequest) Text(text string) *QRequest {
 	return this.Data([]byte(text))
 }
 func (this *QRequest) JSON(jsonData any) *QRequest {
+	this.body = TBody{}
+	this.bodyError = nil
 	data, err := json.Marshal(jsonData)
 
 	if err != nil {
-		this.addConfigError(err)
+		this.bodyError = err
 		return this
 	}
 	this.body = TBody{
@@ -122,6 +120,7 @@ func (this *QRequest) JSON(jsonData any) *QRequest {
 	return this
 }
 func (this *QRequest) Form(formMap TValue) *QRequest {
+	this.bodyError = nil
 	form := url.Values{}
 
 	for key, val := range formMap {
@@ -135,12 +134,14 @@ func (this *QRequest) Form(formMap TValue) *QRequest {
 }
 
 func (this *QRequest) FormMultipart(formMap TValue, fileMap TValue) *QRequest {
+	this.body = TBody{}
+	this.bodyError = nil
 	var buffer bytes.Buffer
 	writer := multipart.NewWriter(&buffer)
 	// TEXT FIELDS
 	for key, val := range formMap {
 		if err := writer.WriteField(key, val); err != nil {
-			this.addConfigError(err)
+			this.bodyError = err
 			return this
 		}
 	}
@@ -149,14 +150,14 @@ func (this *QRequest) FormMultipart(formMap TValue, fileMap TValue) *QRequest {
 		file, err := os.Open(path)
 
 		if err != nil {
-			this.addConfigError(fmt.Errorf("open multipart file %q: %w", path, err))
+			this.bodyError = fmt.Errorf("open multipart file %q: %w", path, err)
 			return this
 		}
 		part, err := writer.CreateFormFile(key, filepath.Base(path))
 
 		if err != nil {
 			closeErr := file.Close()
-			this.addConfigError(errors.Join(err, closeErr))
+			this.bodyError = errors.Join(err, closeErr)
 			return this
 		}
 		_, copyErr := io.Copy(part, file)
@@ -169,12 +170,12 @@ func (this *QRequest) FormMultipart(formMap TValue, fileMap TValue) *QRequest {
 			closeErr = fmt.Errorf("close multipart file %q: %w", path, closeErr)
 		}
 		if err := errors.Join(copyErr, closeErr); err != nil {
-			this.addConfigError(err)
+			this.bodyError = err
 			return this
 		}
 	}
 	if err := writer.Close(); err != nil {
-		this.addConfigError(err)
+		this.bodyError = err
 		return this
 	}
 	this.body = TBody{
@@ -184,22 +185,10 @@ func (this *QRequest) FormMultipart(formMap TValue, fileMap TValue) *QRequest {
 	return this
 }
 func (this *QRequest) Timeout(timeout time.Duration) *QRequest {
-    if timeout < 0 {
-        this.addConfigError(fmt.Errorf("timeout cannot be negative"))
-        return this
-    }
-    this.timeout = timeout
+	this.timeout = timeout
     return this
 }
 func (this *QRequest) Redirect(options TRedirect) *QRequest {
-	if options.Max < 0 {
-		this.addConfigError(fmt.Errorf("Redirect Max cannot be negative"))
-		return this
-	}
-	if options.ResponseMode > VRedirectResponseLast {
-		this.addConfigError(fmt.Errorf("Invalid redirect response mode"))
-		return this
-	}
 	this.redirect = options
 	return this
 }
@@ -224,7 +213,18 @@ func (this *QRequest) handleResponseError(err error) {
 }
 func (this *QRequest) Send() error {
 	var configErrors []error
-	configErrors = append(configErrors, this.configErrors...)
+	if this.bodyError != nil {
+		configErrors = append(configErrors, this.bodyError)
+	}
+	if this.timeout < 0 {
+		configErrors = append(configErrors, errors.New("timeout cannot be negative"))
+	}
+	if this.redirect.Max < 0 {
+		configErrors = append(configErrors, errors.New("Redirect Max cannot be negative"))
+	}
+	if this.redirect.ResponseMode > VRedirectResponseLast {
+		configErrors = append(configErrors, errors.New("Invalid redirect response mode"))
+	}
 
 	if this.url == "" {
 		configErrors = append(configErrors, errors.New("Request Url is empty"))
