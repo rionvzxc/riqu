@@ -245,8 +245,12 @@ func (this *QRequest) Send() error {
 	if this.cookieJar != nil {
 		httpClient.Jar = this.cookieJar.jar
 	}
+	initialUrl, err := url.Parse(this.url)
+	if err != nil {
+		this.handleResponseError(err)
+		return err
+	}
 	currentUrl := this.url
-	previousUrl := ""
 	currentMethod := this.method
 	redirectCount := 0
 
@@ -271,23 +275,20 @@ func (this *QRequest) Send() error {
 			}
 		// HEADER - Redirect
 		} else {
-			previousParsed, err := url.Parse(previousUrl)
-
-			if err != nil {
-				this.handleResponseError(err)
-				return err
-			}
 			currentParsed, err := url.Parse(currentUrl)
 
 			if err != nil {
 				this.handleResponseError(err)
 				return err
 			}
-			sameOrigin := strings.EqualFold(previousParsed.Scheme, currentParsed.Scheme) &&
-				strings.EqualFold(previousParsed.Host, currentParsed.Host)
+			sameOrigin := strings.EqualFold(initialUrl.Scheme, currentParsed.Scheme) &&
+				strings.EqualFold(initialUrl.Host, currentParsed.Host)
 
 			if sameOrigin {
 				httpReq.Header = http.Header(this.header.Clone())
+				for _, cookie := range this.cookies {
+					httpReq.AddCookie(cookie)
+				}
 			} else {
 				allowedHeaders := map[string]bool{
 					"Accept":          true,
@@ -360,7 +361,6 @@ func (this *QRequest) Send() error {
 			this.handleResponseError(err)
 			return err
 		}
-		previousUrl = currentUrl
 		currentUrl = currentParsed.ResolveReference(redirectUrl).String()
 
 		switch httpRes.StatusCode {
