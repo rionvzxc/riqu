@@ -2,6 +2,7 @@ package riqu
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -236,8 +237,13 @@ func (this *QRequest) Send() error {
 		this.handleResponseError(err)
 		return err
 	}
+	requestContext := context.Background()
+	if this.timeout > 0 {
+		var cancel context.CancelFunc
+		requestContext, cancel = context.WithTimeout(requestContext, this.timeout)
+		defer cancel()
+	}
 	httpClient := &http.Client{
-		Timeout: this.timeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
@@ -261,7 +267,7 @@ func (this *QRequest) Send() error {
 		if currentMethod != "GET" && currentMethod != "HEAD" {
 			bodyReader = bytes.NewReader(this.body.Data)
 		}
-		httpReq, err := http.NewRequest(currentMethod, currentUrl, bodyReader)
+		httpReq, err := http.NewRequestWithContext(requestContext, currentMethod, currentUrl, bodyReader)
 		if err != nil {
 			this.handleResponseError(err)
 			return err
