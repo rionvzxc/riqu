@@ -212,10 +212,10 @@ func (this *QRequest) OnError(callbackFunc func(error)) *QRequest {
 	return this
 }
 func (this *QRequest) handleResponse(response *QResponse) {
+	defer response.close()
 	if this.onSuccessFunc != nil {
 		this.onSuccessFunc(response)
 	}
-	response.close()
 }
 func (this *QRequest) handleResponseError(err error) {
 	if this.onErrorFunc != nil {
