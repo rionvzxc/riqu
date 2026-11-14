@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -237,6 +239,94 @@ func TestJSONMarshalingIsDeferredUntilSend(t *testing.T) {
 	}
 	if calls != 1 {
 		t.Fatalf("expected JSON to be marshaled once in Send, got %d calls", calls)
+	}
+}
+
+func TestMultipartStreamsAndReplaysFilesOn307(t *testing.T) {
+	type requestResult struct {
+		path             string
+		contentType      string
+		contentLength    int64
+		transferEncoding []string
+		field            string
+		fileContent      string
+		err              error
+	}
+
+	contents := strings.Repeat("streamed multipart content\n", 8192)
+	filePath := filepath.Join(t.TempDir(), "sample.txt")
+	if err := os.WriteFile(filePath, []byte(contents), 0600); err != nil {
+		t.Fatal(err)
+	}
+	results := make(chan requestResult, 2)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		result := requestResult{
+			path:             request.URL.Path,
+			contentType:      request.Header.Get("Content-Type"),
+			contentLength:    request.ContentLength,
+			transferEncoding: append([]string(nil), request.TransferEncoding...),
+		}
+		result.err = request.ParseMultipartForm(1024)
+		if result.err == nil {
+			result.field = request.FormValue("name")
+			file, _, err := request.FormFile("upload")
+			if err != nil {
+				result.err = err
+			} else {
+				data, readErr := io.ReadAll(file)
+				closeErr := file.Close()
+				result.err = errors.Join(readErr, closeErr)
+				result.fileContent = string(data)
+			}
+			if request.MultipartForm != nil {
+				request.MultipartForm.RemoveAll()
+			}
+		}
+		results <- result
+		if request.URL.Path == "/start" {
+			http.Redirect(w, request, "/final", http.StatusTemporaryRedirect)
+			return
+		}
+		fmt.Fprint(w, "done")
+	}))
+	defer server.Close()
+
+	const contentType = "multipart/form-data; boundary=riqu-test-boundary"
+	var responseBody string
+	var responseErr error
+	err := New().POST(server.URL+"/start").
+		Header(THeader{"Content-Type": []string{contentType}}).
+		FormMultipart(TValue{"name": "riqu"}, TValue{"upload": filePath}).
+		OnSuccess(func(response *QResponse) {
+			responseBody, responseErr = response.Text()
+		}).
+		Send()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if responseErr != nil {
+		t.Fatal(responseErr)
+	}
+	if responseBody != "done" {
+		t.Fatalf("unexpected final response: %q", responseBody)
+	}
+	for _, expectedPath := range []string{"/start", "/final"} {
+		result := <-results
+		if result.path != expectedPath {
+			t.Fatalf("expected request to %q, got %q", expectedPath, result.path)
+		}
+		if result.err != nil {
+			t.Fatalf("multipart request %q failed: %v", result.path, result.err)
+		}
+		if result.contentType != contentType {
+			t.Fatalf("expected explicit Content-Type %q, got %q", contentType, result.contentType)
+		}
+		if result.contentLength != -1 || len(result.transferEncoding) == 0 {
+			t.Fatalf("expected streamed request with unknown length, got length %d and transfer encoding %v", result.contentLength, result.transferEncoding)
+		}
+		if result.field != "riqu" || result.fileContent != contents {
+			t.Fatalf("multipart data was not replayed correctly for %q", result.path)
+		}
 	}
 }
 

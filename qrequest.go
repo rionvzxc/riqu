@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -50,6 +51,7 @@ type multipartBody struct {
 type preparedBody struct {
 	data        []byte
 	contentType string
+	multipart   *multipartBody
 }
 const (
 	VRedirectResponseAll TRedirectResponseMode = iota
@@ -134,6 +136,18 @@ func hasHeader(header http.Header, name string) bool {
 	}
 	return false
 }
+func getHeaderValue(header http.Header, name string) (string, bool) {
+	for key, values := range header {
+		if !strings.EqualFold(key, name) {
+			continue
+		}
+		if len(values) == 0 {
+			return "", true
+		}
+		return values[0], true
+	}
+	return "", false
+}
 func (this *QRequest) Data(data []byte) *QRequest {
 	this.body = TBody{
 		Data: data,
@@ -216,43 +230,73 @@ func (this *QRequest) prepareBody() (preparedBody, error) {
 		if !ok {
 			return preparedBody{}, errors.New("Invalid multipart body")
 		}
-		var buffer bytes.Buffer
-		writer := multipart.NewWriter(&buffer)
-		for key, value := range formData.fields {
-			if err := writer.WriteField(key, value); err != nil {
-				return preparedBody{}, err
-			}
-		}
-		for key, path := range formData.files {
-			file, err := os.Open(path)
-			if err != nil {
-				return preparedBody{}, fmt.Errorf("open multipart file %q: %w", path, err)
-			}
-			part, err := writer.CreateFormFile(key, filepath.Base(path))
-			if err != nil {
-				return preparedBody{}, errors.Join(err, file.Close())
-			}
-			_, copyErr := io.Copy(part, file)
-			closeErr := file.Close()
-			if copyErr != nil {
-				copyErr = fmt.Errorf("copy multipart file %q: %w", path, copyErr)
-			}
-			if closeErr != nil {
-				closeErr = fmt.Errorf("close multipart file %q: %w", path, closeErr)
-			}
-			if err := errors.Join(copyErr, closeErr); err != nil {
-				return preparedBody{}, err
-			}
-		}
-		if err := writer.Close(); err != nil {
-			return preparedBody{}, err
-		}
-		prepared.data = buffer.Bytes()
-		prepared.contentType = writer.FormDataContentType()
+		prepared.multipart = &formData
 	default:
 		return preparedBody{}, errors.New("Invalid request body type")
 	}
 	return prepared, nil
+}
+func (this *QRequest) multipartBodyReader(formData multipartBody) (io.ReadCloser, string, error) {
+	pipeReader, pipeWriter := io.Pipe()
+	writer := multipart.NewWriter(pipeWriter)
+	contentType, hasContentType := getHeaderValue(this.header, "Content-Type")
+	if hasContentType {
+		mediaType, params, err := mime.ParseMediaType(contentType)
+		if err == nil && strings.EqualFold(mediaType, "multipart/form-data") && params["boundary"] != "" {
+			if err := writer.SetBoundary(params["boundary"]); err != nil {
+				pipeReader.Close()
+				pipeWriter.CloseWithError(err)
+				return nil, "", err
+			}
+		}
+	} else {
+		contentType = writer.FormDataContentType()
+	}
+
+	go func() {
+		var writeErr error
+		for key, value := range formData.fields {
+			if err := writer.WriteField(key, value); err != nil {
+				writeErr = err
+				break
+			}
+		}
+		if writeErr == nil {
+			for key, path := range formData.files {
+				file, err := os.Open(path)
+				if err != nil {
+					writeErr = fmt.Errorf("open multipart file %q: %w", path, err)
+					break
+				}
+				part, err := writer.CreateFormFile(key, filepath.Base(path))
+				if err != nil {
+					writeErr = errors.Join(fmt.Errorf("create multipart file %q: %w", path, err), file.Close())
+					break
+				}
+				_, copyErr := io.Copy(part, file)
+				closeErr := file.Close()
+				if copyErr != nil {
+					copyErr = fmt.Errorf("copy multipart file %q: %w", path, copyErr)
+				}
+				if closeErr != nil {
+					closeErr = fmt.Errorf("close multipart file %q: %w", path, closeErr)
+				}
+				if err := errors.Join(copyErr, closeErr); err != nil {
+					writeErr = err
+					break
+				}
+			}
+		}
+		if writeErr == nil {
+			writeErr = writer.Close()
+		}
+		if writeErr != nil {
+			pipeWriter.CloseWithError(writeErr)
+			return
+		}
+		pipeWriter.Close()
+	}()
+	return pipeReader, contentType, nil
 }
 func (this *QRequest) Timeout(timeout time.Duration) *QRequest {
 	this.timeout = timeout
@@ -339,12 +383,28 @@ func (this *QRequest) Send() error {
 	for {
 		// REQUEST
 		var bodyReader io.Reader
+		var bodyCloser io.Closer
+		bodyContentType := preparedBody.contentType
 
 		if currentMethod != "GET" && currentMethod != "HEAD" {
-			bodyReader = bytes.NewReader(preparedBody.data)
+			if preparedBody.multipart != nil {
+				multipartReader, contentType, err := this.multipartBodyReader(*preparedBody.multipart)
+				if err != nil {
+					this.handleResponseError(err)
+					return err
+				}
+				bodyReader = multipartReader
+				bodyCloser = multipartReader
+				bodyContentType = contentType
+			} else {
+				bodyReader = bytes.NewReader(preparedBody.data)
+			}
 		}
 		httpReq, err := http.NewRequestWithContext(requestContext, currentMethod, currentUrl, bodyReader)
 		if err != nil {
+			if bodyCloser != nil {
+				bodyCloser.Close()
+			}
 			this.handleResponseError(err)
 			return err
 		}
@@ -395,8 +455,8 @@ func (this *QRequest) Send() error {
 		// HEADER - Content-Type
 		if bodyReader == nil {
 			httpReq.Header.Del("Content-Type")
-		} else if !hasHeader(this.header, "Content-Type") && preparedBody.contentType != "" {
-			httpReq.Header.Set("Content-Type", preparedBody.contentType)
+		} else if !hasHeader(this.header, "Content-Type") && bodyContentType != "" {
+			httpReq.Header.Set("Content-Type", bodyContentType)
 		}
 		// RESPONSE
 		httpRes, err := httpClient.Do(httpReq)
