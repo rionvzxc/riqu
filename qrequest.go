@@ -201,11 +201,16 @@ func (this *QRequest) OnError(callbackFunc func(error)) *QRequest {
 	this.onErrorFunc = callbackFunc
 	return this
 }
-func (this *QRequest) handleResponse(response *QResponse) {
-	defer response.close()
+func (this *QRequest) handleResponse(response *QResponse) (err error) {
+	defer func() {
+		if !response.bodyRead {
+			err = response.close()
+		}
+	}()
 	if this.onSuccessFunc != nil {
 		this.onSuccessFunc(response)
 	}
+	return nil
 }
 func (this *QRequest) handleResponseError(err error) {
 	if this.onErrorFunc != nil {
@@ -339,7 +344,10 @@ func (this *QRequest) Send() error {
 			body:          httpRes.Body,
 		}
 		if this.redirect.ResponseMode == VRedirectResponseAll {
-			this.handleResponse(qRes)
+			if err := this.handleResponse(qRes); err != nil {
+				this.handleResponseError(err)
+				return err
+			}
 		}
 		follow := redirectCount < this.redirect.Max &&
 			IsRedirectStatus(httpRes.StatusCode) &&
@@ -347,12 +355,18 @@ func (this *QRequest) Send() error {
 
 		if !follow {
 			if this.redirect.ResponseMode == VRedirectResponseLast {
-				this.handleResponse(qRes)
+				if err := this.handleResponse(qRes); err != nil {
+					this.handleResponseError(err)
+					return err
+				}
 			}
 			return nil
 		}
 		if this.redirect.ResponseMode == VRedirectResponseLast {
-			qRes.close()
+			if err := qRes.close(); err != nil {
+				this.handleResponseError(err)
+				return err
+			}
 		}
 		// REDIRECT - Set Url & Method
 		redirectUrl, err := url.Parse(httpRes.Header.Get("Location"))
