@@ -330,6 +330,28 @@ func TestMultipartStreamsAndReplaysFilesOn307(t *testing.T) {
 	}
 }
 
+func TestMultipartMissingFileReturnsSendError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		io.Copy(io.Discard, request.Body)
+		fmt.Fprint(w, "done")
+	}))
+	defer server.Close()
+
+	var callbackErr error
+	request := New().POST(server.URL).
+		FormMultipart(nil, TValue{"upload": filepath.Join(t.TempDir(), "missing.txt")}).
+		OnError(func(err error) {
+			callbackErr = err
+		})
+	err := request.Send()
+	if err == nil {
+		t.Fatal("expected missing multipart file to fail during Send")
+	}
+	if callbackErr == nil {
+		t.Fatal("expected multipart stream error to reach OnError")
+	}
+}
+
 func TestSendRejectsInvalidConfiguration(t *testing.T) {
 	tests := []struct {
 		name      string
