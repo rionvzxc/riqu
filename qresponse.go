@@ -2,6 +2,7 @@ package riqu
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -121,11 +122,21 @@ func (this *QResponse) File(options *TFileOptions) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 	this.bodyRead = true
-	defer this.body.Close()
-	_, err = io.Copy(file, this.body)
-	return err
+	_, copyErr := io.Copy(file, this.body)
+	fileCloseErr := file.Close()
+	bodyCloseErr := this.body.Close()
+	err = errors.Join(copyErr, fileCloseErr, bodyCloseErr)
+
+	if err != nil {
+		removeErr := os.Remove(filename)
+		
+		if removeErr != nil && !os.IsNotExist(removeErr) {
+			err = errors.Join(err, fmt.Errorf("remove incomplete file: %w", removeErr))
+		}
+		return err
+	}
+	return nil
 }
 func (this *QResponse) close() error {
 	if this == nil || this.body == nil {
