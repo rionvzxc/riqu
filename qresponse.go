@@ -12,16 +12,24 @@ import (
 	"path/filepath"
 )
 
+// QResponse contains the metadata and body of an HTTP response.
 type QResponse struct {
-	StatusCode    int
-	Status        string
-	Header        http.Header
-	Cookies       []*http.Cookie
-	RequestUrl    string
+	// StatusCode is the numeric HTTP status code.
+	StatusCode int
+	// Status is the HTTP status text.
+	Status string
+	// Header contains the response headers.
+	Header http.Header
+	// Cookies contains cookies set by the response.
+	Cookies []*http.Cookie
+	// RequestUrl is the URL used for this response.
+	RequestUrl string
+	// RequestMethod is the HTTP method used for this response.
 	RequestMethod string
 	bodyRead      bool
-	body io.ReadCloser
+	body          io.ReadCloser
 }
+// Data reads and closes the response body.
 func (this *QResponse) Data() ([]byte, error) {
 	if this == nil {
 		return nil, fmt.Errorf("Response is nil")
@@ -37,6 +45,7 @@ func (this *QResponse) Data() ([]byte, error) {
 	closeErr := this.body.Close()
 	return data, errors.Join(readErr, closeErr)
 }
+// Text reads the response body as a string.
 func (this *QResponse) Text() (string, error) {
 	rawData, err := this.Data()
 	if err != nil {
@@ -44,6 +53,7 @@ func (this *QResponse) Text() (string, error) {
 	}
 	return string(rawData), nil
 }
+// JSON decodes the response body into target.
 func (this *QResponse) JSON(target any) error {
 	if this == nil {
 		return fmt.Errorf("Response is nil")
@@ -59,6 +69,7 @@ func (this *QResponse) JSON(target any) error {
 	closeErr := this.body.Close()
 	return errors.Join(decodeErr, closeErr)
 }
+// File saves the response body using the supplied file options.
 func (this *QResponse) File(options *TFileOptions) error {
 	if this == nil {
 		return fmt.Errorf("Response is nil")
@@ -132,7 +143,7 @@ func (this *QResponse) File(options *TFileOptions) error {
 
 	if err != nil {
 		removeErr := os.Remove(filename)
-		
+
 		if removeErr != nil && !os.IsNotExist(removeErr) {
 			err = errors.Join(err, fmt.Errorf("remove incomplete file: %w", removeErr))
 		}

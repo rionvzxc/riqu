@@ -6,9 +6,11 @@ import (
 	"net/url"
 )
 
+// QCookieJar wraps a standard library HTTP cookie jar.
 type QCookieJar struct {
 	jar http.CookieJar
 }
+// NewCookieJar creates a cookie jar with the supplied options.
 func NewCookieJar(options *TJarOptions) (*QCookieJar, error) {
 	jar, err := cookiejar.New(options)
 
@@ -17,6 +19,7 @@ func NewCookieJar(options *TJarOptions) (*QCookieJar, error) {
 	}
 	return &QCookieJar{jar: jar}, nil
 }
+// Cookies returns cookies applicable to rawURL.
 func (this *QCookieJar) Cookies(rawURL string) ([]*TCookie, error) {
 	if this == nil || this.jar == nil {
 		return nil, nil
@@ -28,6 +31,7 @@ func (this *QCookieJar) Cookies(rawURL string) ([]*TCookie, error) {
 	}
 	return this.jar.Cookies(u), nil
 }
+// SetCookies stores cookies for rawURL.
 func (this *QCookieJar) SetCookies(rawURL string, cookies []*TCookie) error {
 	if this == nil || this.jar == nil {
 		return nil

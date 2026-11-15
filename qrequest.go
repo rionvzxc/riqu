@@ -29,7 +29,9 @@ const (
 )
 
 const (
+	// VRedirectResponseAll delivers every redirect response to the success callback.
 	VRedirectResponseAll TRedirectResponseMode = iota
+	// VRedirectResponseLast delivers only the final response to the success callback.
 	VRedirectResponseLast
 )
 
@@ -53,8 +55,7 @@ type QRequest struct {
 	onSuccessFunc func(*QResponse)
 	onErrorFunc   func(error)
 }
-
-// Constructor
+// New creates a request with default method, timeout, and redirect settings.
 func New() *QRequest {
 	return &QRequest{
 		method:  "GET",
@@ -67,31 +68,39 @@ func New() *QRequest {
 		},
 	}
 }
+// Url sets the request URL.
 func (this *QRequest) Url(url string) *QRequest {
 	url = strings.TrimSpace(url)
 	this.url = url
 	return this
 }
+// Method sets the HTTP method.
 func (this *QRequest) Method(method string) *QRequest {
 	method = strings.TrimSpace(method)
 	this.method = strings.ToUpper(method)
 	return this
 }
+// GET configures a GET request for url.
 func (this *QRequest) GET(url string) *QRequest {
 	return this.Url(url).Method("GET")
 }
+// POST configures a POST request for url.
 func (this *QRequest) POST(url string) *QRequest {
 	return this.Url(url).Method("POST")
 }
+// PUT configures a PUT request for url.
 func (this *QRequest) PUT(url string) *QRequest {
 	return this.Url(url).Method("PUT")
 }
+// DELETE configures a DELETE request for url.
 func (this *QRequest) DELETE(url string) *QRequest {
 	return this.Url(url).Method("DELETE")
 }
+// PATCH configures a PATCH request for url.
 func (this *QRequest) PATCH(url string) *QRequest {
 	return this.Url(url).Method("PATCH")
 }
+// Header sets the request headers.
 func (this *QRequest) Header(header THeader) *QRequest {
 	if header == nil {
 		this.header = make(THeader)
@@ -100,6 +109,7 @@ func (this *QRequest) Header(header THeader) *QRequest {
 	}
 	return this
 }
+// Cookie sets request cookies from cookieMap.
 func (this *QRequest) Cookie(cookieMap TValues) *QRequest {
 	this.cookies = nil
 
@@ -111,10 +121,12 @@ func (this *QRequest) Cookie(cookieMap TValues) *QRequest {
 	}
 	return this
 }
+// CookieJar sets the cookie jar used by the request.
 func (this *QRequest) CookieJar(cookieJar *QCookieJar) *QRequest {
 	this.cookieJar = cookieJar
 	return this
 }
+// Data sets a raw request body.
 func (this *QRequest) Data(data []byte) *QRequest {
 	this.body = TBody{
 		Data: data,
@@ -123,6 +135,7 @@ func (this *QRequest) Data(data []byte) *QRequest {
 	this.bodyValue = nil
 	return this
 }
+// Text sets a plain text request body.
 func (this *QRequest) Text(text string) *QRequest {
 	this.body = TBody{
 		ContentType: "text/plain",
@@ -131,6 +144,7 @@ func (this *QRequest) Text(text string) *QRequest {
 	this.bodyValue = text
 	return this
 }
+// HTML sets an HTML request body.
 func (this *QRequest) HTML(html string) *QRequest {
 	this.body = TBody{
 		ContentType: "text/html",
@@ -139,6 +153,7 @@ func (this *QRequest) HTML(html string) *QRequest {
 	this.bodyValue = html
 	return this
 }
+// JSON sets a request body that is JSON-encoded when sent.
 func (this *QRequest) JSON(jsonData any) *QRequest {
 	this.body = TBody{
 		ContentType: "application/json",
@@ -147,6 +162,7 @@ func (this *QRequest) JSON(jsonData any) *QRequest {
 	this.bodyValue = jsonData
 	return this
 }
+// Form sets a URL-encoded form request body.
 func (this *QRequest) Form(formMap TValues) *QRequest {
 	this.body = TBody{
 		ContentType: "application/x-www-form-urlencoded",
@@ -155,7 +171,7 @@ func (this *QRequest) Form(formMap TValues) *QRequest {
 	this.bodyValue = formMap.Clone()
 	return this
 }
-
+// FormMultipart sets a multipart form body with fields and file paths.
 func (this *QRequest) FormMultipart(multipart TMultipart) *QRequest {
 	this.body = TBody{}
 	this.bodyKind = requestBodyMultipart
@@ -288,18 +304,22 @@ func (this *QRequest) multipartBodyReader(formData TMultipart) (io.ReadCloser, s
 	}()
 	return pipeReader, contentType, nil
 }
+// Timeout sets the request timeout; zero disables the timeout.
 func (this *QRequest) Timeout(timeout time.Duration) *QRequest {
 	this.timeout = timeout
 	return this
 }
+// Redirect sets the redirect policy for the request.
 func (this *QRequest) Redirect(options TRedirect) *QRequest {
 	this.redirect = options
 	return this
 }
+// OnSuccess sets the callback invoked when a response is received.
 func (this *QRequest) OnSuccess(callbackFunc func(*QResponse)) *QRequest {
 	this.onSuccessFunc = callbackFunc
 	return this
 }
+// OnError sets the callback invoked when request processing fails.
 func (this *QRequest) OnError(callbackFunc func(error)) *QRequest {
 	this.onErrorFunc = callbackFunc
 	return this
@@ -321,6 +341,7 @@ func (this *QRequest) handleResponseError(err error) {
 		this.onErrorFunc(err)
 	}
 }
+// Send executes the configured HTTP request.
 func (this *QRequest) Send() error {
 	var configErrors []error
 
