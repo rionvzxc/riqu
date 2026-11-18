@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 )
 
@@ -101,7 +102,7 @@ func (this *QResponse) File(options *TFileOptions) error {
 		parsedURL, err := url.Parse(this.RequestUrl)
 
 		if err == nil {
-			filename = filepath.Base(parsedURL.Path)
+			filename = path.Base(parsedURL.Path)
 
 			if filename == "." || filename == "/" {
 				filename = ""
@@ -129,8 +130,8 @@ func (this *QResponse) File(options *TFileOptions) error {
 		}
 		filename = filepath.Join(options.Dir, filename)
 	}
-	// CREATE FILE
-	file, err := os.Create(filename)
+	// Stage the download beside its destination so it can be renamed in place.
+	file, err := os.CreateTemp(filepath.Dir(filename), ".riqu-download-*")
 
 	if err != nil {
 		return err
@@ -141,11 +142,14 @@ func (this *QResponse) File(options *TFileOptions) error {
 	bodyCloseErr := this.body.Close()
 	err = errors.Join(copyErr, fileCloseErr, bodyCloseErr)
 
+	if err == nil {
+		err = os.Rename(file.Name(), filename)
+	}
 	if err != nil {
-		removeErr := os.Remove(filename)
+		removeErr := os.Remove(file.Name())
 
 		if removeErr != nil && !os.IsNotExist(removeErr) {
-			err = errors.Join(err, fmt.Errorf("remove incomplete file: %w", removeErr))
+			err = errors.Join(err, fmt.Errorf("remove temporary download: %w", removeErr))
 		}
 		return err
 	}
