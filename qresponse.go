@@ -66,7 +66,18 @@ func (this *QResponse) JSON(target any) error {
 		return fmt.Errorf("Response body unavailable")
 	}
 	this.bodyRead = true
-	decodeErr := json.NewDecoder(this.body).Decode(target)
+	decoder := json.NewDecoder(this.body)
+	decodeErr := decoder.Decode(target)
+
+	if decodeErr == nil {
+		_, decodeErr = decoder.Token()
+
+		if decodeErr == io.EOF {
+			decodeErr = nil
+		} else if decodeErr == nil {
+			decodeErr = errors.New("Response body contains additional JSON data")
+		}
+	}
 	closeErr := this.body.Close()
 	return errors.Join(decodeErr, closeErr)
 }

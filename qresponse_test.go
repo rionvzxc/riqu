@@ -112,6 +112,36 @@ func TestResponseJSONReturnsCloseError(t *testing.T) {
 	}
 }
 
+func TestResponseJSONRejectsTrailingData(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		trailing string
+		wantErr  bool
+	}{
+		{"whitespace", " \t\r\n", false},
+		{"invalid data", "garbage", true},
+		{"another value", " null", true},
+		{"incomplete value", " {", true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			body := &testReadCloser{Reader: strings.NewReader(`{"ok":true}` + tt.trailing)}
+			response := &QResponse{body: body}
+			var data map[string]bool
+
+			err := response.JSON(&data)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("JSON returned %v, want error: %t", err, tt.wantErr)
+			}
+			if !data["ok"] {
+				t.Fatal("expected first JSON value to be decoded")
+			}
+			if body.closeCount != 1 {
+				t.Fatalf("expected body to be closed once, got %d", body.closeCount)
+			}
+		})
+	}
+}
+
 func TestResponseFileUsesFallbackNameForRootURL(t *testing.T) {
 	dir := t.TempDir()
 	response := &QResponse{
