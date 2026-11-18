@@ -21,12 +21,6 @@ go get github.com/rionvzxc/riqu
 - Request timeout configuration
 - Success and error callbacks
 
-## Request Bodies
-
-`Text()` sets `Content-Type` to `text/plain`, `HTML()` sets it to `text/html`, `JSON()` sets it to `application/json`, and `Form()` sets it to `application/x-www-form-urlencoded`. An explicit `Content-Type` set with `Header()` takes precedence over these defaults. JSON, text, and form bodies are encoded when `Send()` is called.
-
-`FormMultipart()` streams file contents into the request instead of buffering the complete multipart body in memory. The request may use chunked transfer encoding when its content length is unknown. Multipart files are reopened if a redirect requires the body to be sent again.
-
 ## Quick Start
 
 ```go
@@ -44,10 +38,10 @@ func main() {
         OnSuccess(func(res *riqu.QResponse) {
             text, err := res.Text()
             
-			if err != nil {
-				fmt.Println("Error:", err)
-				return
-			}
+            if err != nil {
+                fmt.Println("Error:", err)
+                return
+            }
             fmt.Println(res.StatusCode)
             fmt.Println(text)
         }).
@@ -80,10 +74,6 @@ To run an example, clone the repository and execute:
 ```bash
 go run ./examples/basic
 ```
-
-## Redirects
-
-Redirects are followed automatically by default, with a maximum of 10 redirects. The final response is returned.
 
 ## License
 
