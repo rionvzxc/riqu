@@ -340,6 +340,40 @@ func TestMultipartStreamsAndReplaysFilesOn307(t *testing.T) {
 	}
 }
 
+func TestMultipartAddsMissingBoundary(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		if err := request.ParseMultipartForm(1024); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		fmt.Fprint(w, request.FormValue("name"))
+	}))
+	defer server.Close()
+
+	for _, contentType := range []string{"multipart/form-data", `multipart/form-data; boundary=""`} {
+		t.Run(contentType, func(t *testing.T) {
+			var responseBody string
+			var responseErr error
+			err := New().POST(server.URL).
+				Header(THeader{"Content-Type": {contentType}}).
+				FormMultipart(TMultipart{Form: TValues{"name": {"riqu"}}}).
+				OnSuccess(func(response *QResponse) {
+					responseBody, responseErr = response.Text()
+				}).
+				Send()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if responseErr != nil {
+				t.Fatal(responseErr)
+			}
+			if responseBody != "riqu" {
+				t.Fatalf("expected server to parse the multipart form, got %q", responseBody)
+			}
+		})
+	}
+}
+
 func TestMultipartMissingFileReturnsSendError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 		io.Copy(io.Discard, request.Body)

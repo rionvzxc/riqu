@@ -226,23 +226,32 @@ func (this *QRequest) prepareBody() (preparedBody, error) {
 	return prepared, nil
 }
 func (this *QRequest) multipartBodyReader(formData TMultipart) (io.ReadCloser, string, error) {
+	contentType := this.header.Get("Content-Type")
+	var params map[string]string
+
+	if contentType != "" {
+		mediaType, parsedParams, err := mime.ParseMediaType(contentType)
+
+		if err != nil {
+			return nil, "", fmt.Errorf("invalid multipart Content-Type: %w", err)
+		}
+		if mediaType != "multipart/form-data" {
+			return nil, "", fmt.Errorf("invalid multipart Content-Type %q: expected multipart/form-data", mediaType)
+		}
+		params = parsedParams
+	}
 	pipeReader, pipeWriter := io.Pipe()
 	writer := multipart.NewWriter(pipeWriter)
-	contentType := this.header.Get("Content-Type")
-	hasContentType := this.header.Exist("Content-Type")
 
-	if hasContentType {
-		mediaType, params, err := mime.ParseMediaType(contentType)
-
-		if err == nil && strings.EqualFold(mediaType, "multipart/form-data") && params["boundary"] != "" {
-			if err := writer.SetBoundary(params["boundary"]); err != nil {
-				pipeReader.Close()
-				pipeWriter.CloseWithError(err)
-				return nil, "", err
-			}
-		}
-	} else {
+	if contentType == "" {
 		contentType = writer.FormDataContentType()
+	} else if params["boundary"] == "" {
+		params["boundary"] = writer.Boundary()
+		contentType = mime.FormatMediaType("multipart/form-data", params)
+	} else if err := writer.SetBoundary(params["boundary"]); err != nil {
+		pipeReader.Close()
+		pipeWriter.CloseWithError(err)
+		return nil, "", err
 	}
 
 	go func() {
@@ -475,7 +484,7 @@ func (this *QRequest) Send() error {
 		// HEADER - Content-Type
 		if bodyReader == nil {
 			httpReq.Header.Del("Content-Type")
-		} else if !this.header.Exist("Content-Type") && bodyContentType != "" {
+		} else if preparedBody.multipart != nil || (!this.header.Exist("Content-Type") && bodyContentType != "") {
 			httpReq.Header.Set("Content-Type", bodyContentType)
 		}
 		// RESPONSE
