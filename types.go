@@ -11,6 +11,14 @@ type TMap = map[string]any
 // TJarOptions configures a cookie jar.
 type TJarOptions = cookiejar.Options
 
+// TTransportOptions configures a reusable HTTP transport.
+type TTransportOptions struct {
+	// ProxyURL overrides the environment proxy when supplied.
+	ProxyURL string
+	// CAFile adds PEM-encoded CA certificates to the system trust pool.
+	CAFile string
+}
+
 // TCookie represents an HTTP cookie.
 type TCookie = http.Cookie
 

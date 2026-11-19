@@ -53,6 +53,7 @@ type QRequest struct {
 	redirect  TRedirect
 	query     TValues
 	querySet  map[string]bool
+	transport *QTransport
 
 	onStatusFunc  map[int]func(*QResponse)
 	onSuccessFunc func(*QResponse)
@@ -150,6 +151,11 @@ func (this *QRequest) Cookie(cookieMap TValues) *QRequest {
 // CookieJar sets the cookie jar used by the request.
 func (this *QRequest) CookieJar(cookieJar *QCookieJar) *QRequest {
 	this.cookieJar = cookieJar
+	return this
+}
+// Transport sets the reusable transport used by the request; nil uses the default.
+func (this *QRequest) Transport(transport *QTransport) *QRequest {
+	this.transport = transport
 	return this
 }
 // Data sets a raw request body.
@@ -438,6 +444,9 @@ func (this *QRequest) Send() error {
 
 	if this.cookieJar != nil {
 		httpClient.Jar = this.cookieJar.jar
+	}
+	if this.transport != nil {
+		httpClient.Transport = this.transport.transport
 	}
 	initialUrl, err := url.Parse(this.url)
 
