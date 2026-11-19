@@ -51,6 +51,8 @@ type QRequest struct {
 	bodyValue any
 	timeout   time.Duration
 	redirect  TRedirect
+	query     TValues
+	querySet  map[string]bool
 
 	onSuccessFunc func(*QResponse)
 	onErrorFunc   func(error)
@@ -72,6 +74,29 @@ func New() *QRequest {
 func (this *QRequest) Url(url string) *QRequest {
 	url = strings.TrimSpace(url)
 	this.url = url
+	return this
+}
+// Query replaces values for the supplied query keys, preserving other URL keys.
+func (this *QRequest) Query(values TValues) *QRequest {
+	if this.query == nil {
+		this.query = make(TValues)
+		this.querySet = make(map[string]bool)
+	}
+	for key, items := range values {
+		this.query[key] = append([]string(nil), items...)
+		this.querySet[key] = true
+	}
+	return this
+}
+// AddQuery appends query values to those already configured or present in the URL.
+func (this *QRequest) AddQuery(values TValues) *QRequest {
+	if this.query == nil {
+		this.query = make(TValues)
+		this.querySet = make(map[string]bool)
+	}
+	for key, items := range values {
+		this.query[key] = append(this.query[key], items...)
+	}
 	return this
 }
 // Method sets the HTTP method.
@@ -402,6 +427,23 @@ func (this *QRequest) Send() error {
 		return err
 	}
 	currentUrl := this.url
+
+	if len(this.query) > 0 {
+		query, err := url.ParseQuery(initialUrl.RawQuery)
+
+		if err != nil {
+			this.handleResponseError(err)
+			return err
+		}
+		for key, values := range this.query {
+			if this.querySet[key] {
+				delete(query, key)
+			}
+			query[key] = append(query[key], values...)
+		}
+		initialUrl.RawQuery = query.Encode()
+		currentUrl = initialUrl.String()
+	}
 	currentMethod := this.method
 	redirectCount := 0
 
