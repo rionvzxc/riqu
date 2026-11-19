@@ -54,6 +54,7 @@ type QRequest struct {
 	query     TValues
 	querySet  map[string]bool
 
+	onStatusFunc  map[int]func(*QResponse)
 	onSuccessFunc func(*QResponse)
 	onErrorFunc   func(error)
 }
@@ -348,9 +349,25 @@ func (this *QRequest) Redirect(options TRedirect) *QRequest {
 	this.redirect = options
 	return this
 }
-// OnSuccess sets the callback invoked when a response is received.
+// OnSuccess sets the fallback callback for responses without a status handler.
 func (this *QRequest) OnSuccess(callbackFunc func(*QResponse)) *QRequest {
 	this.onSuccessFunc = callbackFunc
+	return this
+}
+// OnStatus sets a status handler, replacing the previous handler for that status.
+// A nil handler restores the OnSuccess fallback.
+func (this *QRequest) OnStatus(status int, callbackFunc func(*QResponse)) *QRequest {
+	if this.onStatusFunc == nil {
+		this.onStatusFunc = make(map[int]func(*QResponse))
+	}
+	this.onStatusFunc[status] = callbackFunc
+	return this
+}
+// OnStatuses sets the same handler for each supplied status.
+func (this *QRequest) OnStatuses(statuses []int, callbackFunc func(*QResponse)) *QRequest {
+	for _, status := range statuses {
+		this.OnStatus(status, callbackFunc)
+	}
 	return this
 }
 // OnError sets the callback invoked when request processing fails.
@@ -365,7 +382,9 @@ func (this *QRequest) handleResponse(response *QResponse) (err error) {
 		}
 	}()
 
-	if this.onSuccessFunc != nil {
+	if callbackFunc := this.onStatusFunc[response.StatusCode]; callbackFunc != nil {
+		callbackFunc(response)
+	} else if this.onSuccessFunc != nil {
 		this.onSuccessFunc(response)
 	}
 	return nil
