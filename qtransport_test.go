@@ -48,6 +48,21 @@ func TestTransportTLSVerification(t *testing.T) {
 	}
 }
 
+func TestRequestAcceptsEmptyTransport(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		fmt.Fprint(w, "ok")
+	}))
+	defer server.Close()
+	var transport QTransport
+	var text string
+	var readErr error
+	err := New().GET(server.URL).Transport(&transport).
+		OnSuccess(func(response *QResponse) { text, readErr = response.Text() }).Send()
+	if err != nil || readErr != nil || text != "ok" {
+		t.Fatalf("empty transport failed: %q, %v, %v", text, err, readErr)
+	}
+}
+
 func TestTransportHTTPProxy(t *testing.T) {
 	var receivedURL string
 	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {

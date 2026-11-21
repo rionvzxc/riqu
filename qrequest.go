@@ -445,7 +445,7 @@ func (this *QRequest) Send() error {
 	if this.cookieJar != nil {
 		httpClient.Jar = this.cookieJar.jar
 	}
-	if this.transport != nil {
+	if this.transport != nil && this.transport.transport != nil {
 		httpClient.Transport = this.transport.transport
 	}
 	initialUrl, err := url.Parse(this.url)
@@ -473,7 +473,14 @@ func (this *QRequest) Send() error {
 		currentUrl = initialUrl.String()
 	}
 	currentMethod := this.method
+	sendBody := currentMethod != "GET" && currentMethod != "HEAD" ||
+		this.bodyKind != requestBodyData || this.body.Data != nil
 	redirectCount := 0
+	initialRequest := &http.Request{Header: http.Header(this.header.Clone())}
+
+	for _, cookie := range this.cookies {
+		initialRequest.AddCookie(cookie)
+	}
 
 	for {
 		// REQUEST
@@ -481,7 +488,7 @@ func (this *QRequest) Send() error {
 		var bodyCloser io.Closer
 		bodyContentType := preparedBody.contentType
 
-		if currentMethod != "GET" && currentMethod != "HEAD" {
+		if sendBody {
 			if preparedBody.multipart != nil {
 				multipartReader, contentType, err := this.multipartBodyReader(*preparedBody.multipart)
 
@@ -507,11 +514,7 @@ func (this *QRequest) Send() error {
 		}
 		// HEADER - First Request
 		if redirectCount == 0 {
-			httpReq.Header = http.Header(this.header.Clone())
-
-			for _, cookie := range this.cookies {
-				httpReq.AddCookie(cookie)
-			}
+			httpReq.Header = initialRequest.Header.Clone()
 			// HEADER - Redirect
 		} else {
 			currentParsed, err := url.Parse(currentUrl)
@@ -524,11 +527,7 @@ func (this *QRequest) Send() error {
 				strings.EqualFold(initialUrl.Host, currentParsed.Host)
 
 			if sameOrigin {
-				httpReq.Header = http.Header(this.header.Clone())
-
-				for _, cookie := range this.cookies {
-					httpReq.AddCookie(cookie)
-				}
+				httpReq.Header = initialRequest.Header.Clone()
 			} else {
 				allowedHeaders := map[string]bool{
 					"Accept":          true,
@@ -551,6 +550,10 @@ func (this *QRequest) Send() error {
 				}
 			}
 		}
+		if host := httpReq.Header.Get("Host"); host != "" {
+			httpReq.Host = host
+		}
+		httpReq.Header.Del("Host")
 		// HEADER - Content-Type
 		if bodyReader == nil {
 			httpReq.Header.Del("Content-Type")
@@ -563,6 +566,21 @@ func (this *QRequest) Send() error {
 		if err != nil {
 			this.handleResponseError(err)
 			return err
+		}
+		if httpClient.Jar != nil && len(httpRes.Cookies()) > 0 {
+			replacedCookies := make(map[string]bool)
+
+			for _, cookie := range httpRes.Cookies() {
+				replacedCookies[cookie.Name] = true
+			}
+			cookies := initialRequest.Cookies()
+			initialRequest.Header.Del("Cookie")
+
+			for _, cookie := range cookies {
+				if !replacedCookies[cookie.Name] {
+					initialRequest.AddCookie(cookie)
+				}
+			}
 		}
 		qRes := &QResponse{
 			StatusCode:    httpRes.StatusCode,
@@ -616,12 +634,15 @@ func (this *QRequest) Send() error {
 
 		switch httpRes.StatusCode {
 		case 303:
+			sendBody = false
+
 			if currentMethod != "HEAD" {
 				currentMethod = "GET"
 			}
 		case 301, 302:
 			if currentMethod == "POST" {
 				currentMethod = "GET"
+				sendBody = false
 			}
 		}
 		redirectCount++
