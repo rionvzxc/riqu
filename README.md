@@ -1,6 +1,6 @@
 # riqu
 
-`riqu` is a lightweight HTTP client library for Go, designed with a simple and chainable API. It makes sending HTTP requests, handling responses, managing cookies, and downloading files straightforward and convenient.
+`riqu` is an HTTP client library for Go with a simple, chainable API for building requests and handling responses. It supports query parameters, custom headers, JSON and form data, multipart uploads, cookie management, redirects, and file downloads. Status-specific callbacks and reusable transports help you configure response handling, proxies, and trusted CA certificates.
 
 ## Installation
 
