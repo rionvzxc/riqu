@@ -223,7 +223,7 @@ func (this *QRequest) prepareBody() (preparedBody, error) {
 		value, ok := this.bodyValue.(string)
 
 		if !ok {
-			return preparedBody{}, errors.New("Invalid request body")
+			return preparedBody{}, errors.New("riqu: invalid request body")
 		}
 		prepared.data = []byte(value)
 	case requestBodyJSON:
@@ -237,7 +237,7 @@ func (this *QRequest) prepareBody() (preparedBody, error) {
 		formMap, ok := this.bodyValue.(TValues)
 
 		if !ok {
-			return preparedBody{}, errors.New("Invalid form body")
+			return preparedBody{}, errors.New("riqu: invalid form body")
 		}
 		form := url.Values{}
 
@@ -249,11 +249,11 @@ func (this *QRequest) prepareBody() (preparedBody, error) {
 		formData, ok := this.bodyValue.(TMultipart)
 
 		if !ok {
-			return preparedBody{}, errors.New("Invalid multipart body")
+			return preparedBody{}, errors.New("riqu: invalid multipart body")
 		}
 		prepared.multipart = &formData
 	default:
-		return preparedBody{}, errors.New("Invalid request body type")
+		return preparedBody{}, errors.New("riqu: invalid request body type")
 	}
 	return prepared, nil
 }
@@ -265,10 +265,10 @@ func (this *QRequest) multipartBodyReader(formData TMultipart) (io.ReadCloser, s
 		mediaType, parsedParams, err := mime.ParseMediaType(contentType)
 
 		if err != nil {
-			return nil, "", fmt.Errorf("invalid multipart Content-Type: %w", err)
+			return nil, "", fmt.Errorf("riqu: invalid multipart Content-Type: %w", err)
 		}
 		if mediaType != "multipart/form-data" {
-			return nil, "", fmt.Errorf("invalid multipart Content-Type %q: expected multipart/form-data", mediaType)
+			return nil, "", fmt.Errorf("riqu: invalid multipart Content-Type %q: expected multipart/form-data", mediaType)
 		}
 		params = parsedParams
 	}
@@ -306,23 +306,23 @@ func (this *QRequest) multipartBodyReader(formData TMultipart) (io.ReadCloser, s
 					file, err := os.Open(path)
 
 					if err != nil {
-						writeErr = fmt.Errorf("open multipart file %q: %w", path, err)
+						writeErr = fmt.Errorf("riqu: open multipart file %q: %w", path, err)
 						break
 					}
 					part, err := writer.CreateFormFile(key, filepath.Base(path))
 
 					if err != nil {
-						writeErr = errors.Join(fmt.Errorf("create multipart file %q: %w", path, err), file.Close())
+						writeErr = errors.Join(fmt.Errorf("riqu: create multipart file %q: %w", path, err), file.Close())
 						break
 					}
 					_, copyErr := io.Copy(part, file)
 					closeErr := file.Close()
 
 					if copyErr != nil {
-						copyErr = fmt.Errorf("copy multipart file %q: %w", path, copyErr)
+						copyErr = fmt.Errorf("riqu: copy multipart file %q: %w", path, copyErr)
 					}
 					if closeErr != nil {
-						closeErr = fmt.Errorf("close multipart file %q: %w", path, closeErr)
+						closeErr = fmt.Errorf("riqu: close multipart file %q: %w", path, closeErr)
 					}
 					if err := errors.Join(copyErr, closeErr); err != nil {
 						writeErr = err
@@ -405,19 +405,19 @@ func (this *QRequest) Send() error {
 	var configErrors []error
 
 	if this.timeout < 0 {
-		configErrors = append(configErrors, errors.New("timeout cannot be negative"))
+		configErrors = append(configErrors, errors.New("riqu: timeout cannot be negative"))
 	}
 	if this.redirect.Max < 0 {
-		configErrors = append(configErrors, errors.New("Redirect Max cannot be negative"))
+		configErrors = append(configErrors, errors.New("riqu: redirect max cannot be negative"))
 	}
 	if this.redirect.ResponseMode > VRedirectResponseLast {
-		configErrors = append(configErrors, errors.New("Invalid redirect response mode"))
+		configErrors = append(configErrors, errors.New("riqu: invalid redirect response mode"))
 	}
 	if this.url == "" {
-		configErrors = append(configErrors, errors.New("Request Url is empty"))
+		configErrors = append(configErrors, errors.New("riqu: request URL is empty"))
 	}
 	if this.method == "" {
-		configErrors = append(configErrors, errors.New("Request Method is empty"))
+		configErrors = append(configErrors, errors.New("riqu: request method is empty"))
 	}
 	if err := errors.Join(configErrors...); err != nil {
 		this.handleResponseError(err)

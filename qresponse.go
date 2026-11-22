@@ -33,13 +33,13 @@ type QResponse struct {
 // Data reads and closes the response body.
 func (this *QResponse) Data() ([]byte, error) {
 	if this == nil {
-		return nil, fmt.Errorf("Response is nil")
+		return nil, fmt.Errorf("riqu: response is nil")
 	}
 	if this.bodyRead {
-		return nil, fmt.Errorf("Response body already read")
+		return nil, fmt.Errorf("riqu: response body already read")
 	}
 	if this.body == nil {
-		return nil, fmt.Errorf("Response body unavailable")
+		return nil, fmt.Errorf("riqu: response body unavailable")
 	}
 	this.bodyRead = true
 	data, readErr := io.ReadAll(this.body)
@@ -57,13 +57,13 @@ func (this *QResponse) Text() (string, error) {
 // JSON decodes the response body into target.
 func (this *QResponse) JSON(target any) error {
 	if this == nil {
-		return fmt.Errorf("Response is nil")
+		return fmt.Errorf("riqu: response is nil")
 	}
 	if this.bodyRead {
-		return fmt.Errorf("Response body already read")
+		return fmt.Errorf("riqu: response body already read")
 	}
 	if this.body == nil {
-		return fmt.Errorf("Response body unavailable")
+		return fmt.Errorf("riqu: response body unavailable")
 	}
 	this.bodyRead = true
 	decoder := json.NewDecoder(this.body)
@@ -75,7 +75,7 @@ func (this *QResponse) JSON(target any) error {
 		if decodeErr == io.EOF {
 			decodeErr = nil
 		} else if decodeErr == nil {
-			decodeErr = errors.New("Response body contains additional JSON data")
+			decodeErr = errors.New("riqu: response body contains additional JSON data")
 		}
 	}
 	closeErr := this.body.Close()
@@ -84,13 +84,13 @@ func (this *QResponse) JSON(target any) error {
 // File saves the response body using the supplied file options.
 func (this *QResponse) File(options *TFileOptions) error {
 	if this == nil {
-		return fmt.Errorf("Response is nil")
+		return fmt.Errorf("riqu: response is nil")
 	}
 	if this.bodyRead {
-		return fmt.Errorf("Response body already read")
+		return fmt.Errorf("riqu: response body already read")
 	}
 	if this.body == nil {
-		return fmt.Errorf("Response body unavailable")
+		return fmt.Errorf("riqu: response body unavailable")
 	}
 	if options == nil {
 		options = &TFileOptions{}
@@ -160,7 +160,7 @@ func (this *QResponse) File(options *TFileOptions) error {
 		removeErr := os.Remove(file.Name())
 
 		if removeErr != nil && !os.IsNotExist(removeErr) {
-			err = errors.Join(err, fmt.Errorf("remove temporary download: %w", removeErr))
+			err = errors.Join(err, fmt.Errorf("riqu: remove temporary download: %w", removeErr))
 		}
 		return err
 	}
