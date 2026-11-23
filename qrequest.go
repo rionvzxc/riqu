@@ -226,6 +226,7 @@ func (this *QRequest) Send() error {
 	currentMethod := this.method
 	sendBody := currentMethod != "GET" && currentMethod != "HEAD" ||
 		this.body.bodyType != vRequestBodyData || preparedBody.data != nil
+	bodyDropped := false
 	redirectCount := 0
 	initialRequest := &http.Request{Header: http.Header(this.header.Clone())}
 
@@ -306,9 +307,9 @@ func (this *QRequest) Send() error {
 		}
 		httpReq.Header.Del("Host")
 		// HEADER - Content-Type
-		if bodyReader == nil {
+		if bodyDropped {
 			httpReq.Header.Del("Content-Type")
-		} else if preparedBody.multipart != nil || (!this.header.Exist("Content-Type") && bodyContentType != "") {
+		} else if bodyReader != nil && (preparedBody.multipart != nil || (!this.header.Exist("Content-Type") && bodyContentType != "")) {
 			httpReq.Header.Set("Content-Type", bodyContentType)
 		}
 		// RESPONSE
@@ -387,6 +388,7 @@ func (this *QRequest) Send() error {
 		switch httpRes.StatusCode {
 		case 303:
 			sendBody = false
+			bodyDropped = true
 
 			if currentMethod != "HEAD" {
 				currentMethod = "GET"
@@ -395,6 +397,7 @@ func (this *QRequest) Send() error {
 			if currentMethod == "POST" {
 				currentMethod = "GET"
 				sendBody = false
+				bodyDropped = true
 			}
 		}
 		redirectCount++

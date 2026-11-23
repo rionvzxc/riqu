@@ -39,3 +39,30 @@ func TestRequestContentType(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestRequestContentTypeWithoutBody(t *testing.T) {
+	for _, method := range []string{"GET", "HEAD", "POST"} {
+		for _, status := range []int{200, 301, 302, 303, 307, 308} {
+			t.Run(method+"/"+http.StatusText(status), func(t *testing.T) {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+					want := "application/custom"
+
+					if request.URL.Path == "/final" && (status == 303 || method == "POST" && (status == 301 || status == 302)) {
+						want = ""
+					}
+					if got := request.Header.Get("Content-Type"); got != want {
+						t.Errorf("%s %s: Content-Type = %q, want %q", request.Method, request.URL.Path, got, want)
+					}
+					if request.URL.Path == "/" && status != 200 {
+						http.Redirect(w, request, "/final", status)
+					}
+				}))
+				defer server.Close()
+
+				if err := New().Url(server.URL).Method(method).ContentType("application/custom").Send(); err != nil {
+					t.Fatal(err)
+				}
+			})
+		}
+	}
+}
