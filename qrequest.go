@@ -190,8 +190,16 @@ func (this *QRequest) Send() error {
 		},
 	}
 
-	if this.cookieJar != nil {
+	var cookieChanges *QCookieJar
+
+	if this.cookieJar != nil && this.cookieJar.jar != nil {
 		httpClient.Jar = this.cookieJar.jar
+		cookieChanges, err = NewCookieJar(&this.cookieJar.options)
+
+		if err != nil {
+			this.handleResponseError(err)
+			return err
+		}
 	}
 	if this.transport != nil && this.transport.transport != nil {
 		httpClient.Transport = this.transport.transport
@@ -312,6 +320,23 @@ func (this *QRequest) Send() error {
 		} else if bodyReader != nil && (preparedBody.multipart != nil || (!this.header.Exist("Content-Type") && bodyContentType != "")) {
 			httpReq.Header.Set("Content-Type", bodyContentType)
 		}
+		if cookieChanges != nil {
+			replacedCookies := make(map[string]bool)
+
+			for _, cookie := range cookieChanges.jar.Cookies(httpReq.URL) {
+				replacedCookies[cookie.Name] = true
+			}
+			if len(replacedCookies) > 0 {
+				cookies := httpReq.Cookies()
+				httpReq.Header.Del("Cookie")
+
+				for _, cookie := range cookies {
+					if !replacedCookies[cookie.Name] {
+						httpReq.AddCookie(cookie)
+					}
+				}
+			}
+		}
 		// RESPONSE
 		httpRes, err := httpClient.Do(httpReq)
 
@@ -319,20 +344,17 @@ func (this *QRequest) Send() error {
 			this.handleResponseError(err)
 			return err
 		}
-		if httpClient.Jar != nil && len(httpRes.Cookies()) > 0 {
-			replacedCookies := make(map[string]bool)
-
-			for _, cookie := range httpRes.Cookies() {
-				replacedCookies[cookie.Name] = true
-			}
-			cookies := initialRequest.Cookies()
-			initialRequest.Header.Del("Cookie")
+		if cookieChanges != nil {
+			cookies := httpRes.Cookies()
 
 			for _, cookie := range cookies {
-				if !replacedCookies[cookie.Name] {
-					initialRequest.AddCookie(cookie)
-				}
+				// Keep the scope even when the server deletes the cookie.
+				cookie.Value = "changed"
+				cookie.MaxAge = 0
+				cookie.Expires = time.Time{}
+				cookie.RawExpires = ""
 			}
+			cookieChanges.jar.SetCookies(httpReq.URL, cookies)
 		}
 		qRes := &QResponse{
 			statusCode:    httpRes.StatusCode,

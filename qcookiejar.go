@@ -8,16 +8,22 @@ import (
 
 // QCookieJar wraps a standard library HTTP cookie jar.
 type QCookieJar struct {
-	jar http.CookieJar
+	jar     http.CookieJar
+	options TJarOptions
 }
 // NewCookieJar creates a cookie jar with the supplied options.
 func NewCookieJar(options *TJarOptions) (*QCookieJar, error) {
-	jar, err := cookiejar.New(options)
+	var jarOptions TJarOptions
+
+	if options != nil {
+		jarOptions = *options
+	}
+	jar, err := cookiejar.New(&jarOptions)
 
 	if err != nil {
 		return nil, err
 	}
-	return &QCookieJar{jar: jar}, nil
+	return &QCookieJar{jar: jar, options: jarOptions}, nil
 }
 // Cookies returns cookies applicable to rawURL.
 func (this *QCookieJar) Cookies(rawURL string) (TCookies, error) {

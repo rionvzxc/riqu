@@ -5,7 +5,92 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
+
+func TestRedirectManualCookieScope(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		cookie TCookie
+		start  string
+		final  string
+		want   string
+	}{
+		{"different path", TCookie{Path: "/other"}, "/start", "/final", "manual"},
+		{"path boundary", TCookie{Path: "/other"}, "/start", "/otherwise", "manual"},
+		{"matching path", TCookie{Path: "/other"}, "/start", "/other/final", "new"},
+		{"default path", TCookie{}, "/scope/start", "/final", "manual"},
+		{"matching default path", TCookie{}, "/scope/start", "/scope/final", "new"},
+		{"invalid domain", TCookie{Path: "/", Domain: "unrelated.invalid"}, "/start", "/final", "manual"},
+		{"secure on HTTP", TCookie{Path: "/", Secure: true}, "/start", "/final", "manual"},
+		{"delete matching path", TCookie{Path: "/", MaxAge: -1}, "/start", "/final", ""},
+		{"delete different path", TCookie{Path: "/other", MaxAge: -1}, "/start", "/final", "manual"},
+		{"expired matching path", TCookie{Path: "/", Expires: time.Unix(1, 0)}, "/start", "/final", ""},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+				if request.URL.Path == test.start {
+					cookie := test.cookie
+					cookie.Name = "session"
+					cookie.Value = "new"
+					http.SetCookie(w, &cookie)
+					http.Redirect(w, request, test.final, http.StatusFound)
+					return
+				}
+				want := "keep=value"
+
+				if test.want != "" {
+					want += "; session=" + test.want
+				}
+				if got := request.Header.Get("Cookie"); got != want {
+					t.Errorf("Cookie = %q, want %q", got, want)
+				}
+			}))
+			defer server.Close()
+			jar, err := NewCookieJar(nil)
+
+			if err != nil {
+				t.Fatal(err)
+			}
+			request := New().GET(server.URL+test.start).
+				SetHeader("Cookie", "keep=value").SetCookie("session", "manual").CookieJar(jar)
+
+			for i := 0; i < 2; i++ {
+				if err := request.Send(); err != nil {
+					t.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
+func TestRedirectManualCookieReturnsOutsideChangedScope(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
+		case "/start":
+			http.SetCookie(w, &http.Cookie{Name: "session", Value: "new", Path: "/other"})
+			http.Redirect(w, request, "/other/step", http.StatusFound)
+		case "/other/step":
+			if got := request.Header.Get("Cookie"); got != "session=new" {
+				t.Errorf("Cookie inside scope = %q", got)
+			}
+			http.Redirect(w, request, "/final", http.StatusFound)
+		default:
+			if got := request.Header.Get("Cookie"); got != "session=manual" {
+				t.Errorf("Cookie outside scope = %q", got)
+			}
+		}
+	}))
+	defer server.Close()
+	jar, err := NewCookieJar(nil)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := New().GET(server.URL+"/start").SetCookie("session", "manual").CookieJar(jar).Send(); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestRedirectUpdatesAndDeletesManualCookies(t *testing.T) {
 	for _, maxAge := range []int{0, -1} {
