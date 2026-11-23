@@ -18,11 +18,11 @@ func TestStatusHandlersDispatchOnceAndFallback(t *testing.T) {
 		fmt.Fprint(w, "missing")
 	}))
 	defer server.Close()
-	for _, mode := range []TRedirectResponseMode{VRedirectResponseAll, VRedirectResponseLast} {
+	for _, mode := range []TResponseMode{VAllResponses, VLastResponse} {
 		var called []int
 		fallback := 0
 		request := New().GET(server.URL).
-			Redirect(TRedirect{Max: 1, ResponseMode: mode}).
+			RedirectOptions(TRedirectOptions{Max: 1, Responses: mode}).
 			OnSuccess(func(*QResponse) { fallback++ }).
 			OnStatuses([]int{302, 404, 404}, func(response *QResponse) {
 				called = append(called, response.StatusCode())
@@ -38,7 +38,7 @@ func TestStatusHandlersDispatchOnceAndFallback(t *testing.T) {
 			t.Fatal(err)
 		}
 		want := []int{404}
-		if mode == VRedirectResponseAll {
+		if mode == VAllResponses {
 			want = []int{302, 404}
 		}
 		if !reflect.DeepEqual(called, want) || fallback != 0 {

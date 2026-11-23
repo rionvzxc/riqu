@@ -112,8 +112,8 @@ func TestSendValidatesCurrentConfiguration(t *testing.T) {
 		Data([]byte("valid body")).
 		Timeout(-time.Second).
 		Timeout(time.Second).
-		Redirect(TRedirect{Max: -1}).
-		Redirect(TRedirect{Max: 1, ResponseMode: VRedirectResponseLast}).
+		RedirectOptions(TRedirectOptions{Max: -1}).
+		RedirectOptions(TRedirectOptions{Max: 1, Responses: VLastResponse}).
 		OnSuccess(func(res *QResponse) {
 			responseBody, responseErr = res.Text()
 		}).
@@ -412,13 +412,13 @@ func TestSendRejectsInvalidConfiguration(t *testing.T) {
 		{
 			name: "negative redirect limit",
 			configure: func(request *QRequest) {
-				request.Redirect(TRedirect{Max: -1})
+				request.RedirectOptions(TRedirectOptions{Max: -1})
 			},
 		},
 		{
 			name: "invalid redirect response mode",
 			configure: func(request *QRequest) {
-				request.Redirect(TRedirect{Max: 1, ResponseMode: TRedirectResponseMode(2)})
+				request.RedirectOptions(TRedirectOptions{Max: 1, Responses: TResponseMode(2)})
 			},
 		},
 		{
@@ -635,7 +635,7 @@ func TestSendZeroRedirectConfigurationDoesNotFollow(t *testing.T) {
 
 	var statusCode int
 	err := New().GET(server.URL + "/start").
-		Redirect(TRedirect{}).
+		RedirectOptions(TRedirectOptions{}).
 		OnSuccess(func(response *QResponse) {
 			statusCode = response.StatusCode()
 		}).

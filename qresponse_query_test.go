@@ -15,10 +15,10 @@ func TestResponseQueryUsesEachRedirectURL(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	for _, mode := range []TRedirectResponseMode{VRedirectResponseAll, VRedirectResponseLast} {
+	for _, mode := range []TResponseMode{VAllResponses, VLastResponse} {
 		var pages []string
 		err := New().GET(server.URL + "/start?page=1").
-			Redirect(TRedirect{Max: 1, ResponseMode: mode}).
+			RedirectOptions(TRedirectOptions{Max: 1, Responses: mode}).
 			OnSuccess(func(response *QResponse) {
 				pages = append(pages, response.Query("page", "missing"))
 				if response.Query("missing", "fallback") != "fallback" {
@@ -53,7 +53,7 @@ func TestResponseQueryUsesEachRedirectURL(t *testing.T) {
 			t.Fatal(err)
 		}
 		want := []string{"2"}
-		if mode == VRedirectResponseAll {
+		if mode == VAllResponses {
 			want = []string{"1", "2"}
 		}
 		if !reflect.DeepEqual(pages, want) {

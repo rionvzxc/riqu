@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	// VRedirectResponseAll delivers every redirect response to the response callback.
-	VRedirectResponseAll TRedirectResponseMode = iota
-	// VRedirectResponseLast delivers only the final response to the response callback.
-	VRedirectResponseLast
+	// VLastResponse delivers only the final response to the response callback.
+	VLastResponse TResponseMode = iota
+	// VAllResponses delivers every response in the redirect chain to a response callback.
+	VAllResponses
 )
 
 type QRequest struct {
@@ -26,7 +26,7 @@ type QRequest struct {
 	cookieJar *QCookieJar
 	body      tRequestBody
 	timeout   time.Duration
-	redirect  TRedirect
+	redirectOptions TRedirectOptions
 	query     TValues
 	querySet  map[string]bool
 	queryAll  bool
@@ -43,9 +43,9 @@ func New() *QRequest {
 		header:  THeader{},
 		cookies: TCookies{},
 		timeout: 10 * time.Second,
-		redirect: TRedirect{
+		redirectOptions: TRedirectOptions{
 			Max:          10,
-			ResponseMode: VRedirectResponseLast,
+			Responses: VLastResponse,
 		},
 	}
 }
@@ -91,9 +91,9 @@ func (this *QRequest) Timeout(timeout time.Duration) *QRequest {
 	this.timeout = timeout
 	return this
 }
-// Redirect sets the redirect policy for the request.
-func (this *QRequest) Redirect(options TRedirect) *QRequest {
-	this.redirect = options
+// RedirectOptions sets the redirect policy for the request.
+func (this *QRequest) RedirectOptions(options TRedirectOptions) *QRequest {
+	this.redirectOptions = options
 	return this
 }
 // OnSuccess sets the fallback callback for responses without a status handler.
@@ -148,10 +148,10 @@ func (this *QRequest) Send() error {
 	if this.timeout < 0 {
 		configErrors = append(configErrors, errors.New("riqu: timeout cannot be negative"))
 	}
-	if this.redirect.Max < 0 {
+	if this.redirectOptions.Max < 0 {
 		configErrors = append(configErrors, errors.New("riqu: redirect max cannot be negative"))
 	}
-	if this.redirect.ResponseMode > VRedirectResponseLast {
+	if this.redirectOptions.Responses > VAllResponses {
 		configErrors = append(configErrors, errors.New("riqu: invalid redirect response mode"))
 	}
 	if this.url == "" {
@@ -337,18 +337,18 @@ func (this *QRequest) Send() error {
 			body:          httpRes.Body,
 		}
 
-		if this.redirect.ResponseMode == VRedirectResponseAll {
+		if this.redirectOptions.Responses == VAllResponses {
 			if err := this.handleResponse(qRes); err != nil {
 				this.handleResponseError(err)
 				return err
 			}
 		}
-		follow := redirectCount < this.redirect.Max &&
+		follow := redirectCount < this.redirectOptions.Max &&
 			isRedirectStatus(httpRes.StatusCode) &&
 			httpRes.Header.Get("Location") != ""
 
 		if !follow {
-			if this.redirect.ResponseMode == VRedirectResponseLast {
+			if this.redirectOptions.Responses == VLastResponse {
 				if err := this.handleResponse(qRes); err != nil {
 					this.handleResponseError(err)
 					return err
@@ -356,7 +356,7 @@ func (this *QRequest) Send() error {
 			}
 			return nil
 		}
-		if this.redirect.ResponseMode == VRedirectResponseLast {
+		if this.redirectOptions.Responses == VLastResponse {
 			if err := qRes.close(); err != nil {
 				this.handleResponseError(err)
 				return err

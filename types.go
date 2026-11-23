@@ -22,15 +22,15 @@ type TTransportOptions struct {
 // TCookie represents an HTTP cookie.
 type TCookie = http.Cookie
 
-// TRedirectResponseMode controls which redirect responses are delivered to callbacks.
-type TRedirectResponseMode uint
+// TResponseMode controls which redirect responses are delivered to callbacks.
+type TResponseMode uint
 
-// TRedirect configures how requests follow redirects.
-type TRedirect struct {
+// TRedirectOptions configures how requests follow redirects.
+type TRedirectOptions struct {
 	// Max is the maximum number of redirects to follow.
 	Max int
-	// ResponseMode selects which redirect responses are delivered to callbacks.
-	ResponseMode TRedirectResponseMode
+	// Responses selects which redirect responses are delivered to callbacks.
+	Responses TResponseMode
 }
 // tRequestBody stores request body data and its content type.
 type tRequestBody struct {
