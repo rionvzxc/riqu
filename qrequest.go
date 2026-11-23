@@ -17,15 +17,15 @@ import (
 	"time"
 )
 
-type requestBodyKind uint
+type tRequestBodyType uint
 
 const (
-	requestBodyData requestBodyKind = iota
-	requestBodyText
-	requestBodyHTML
-	requestBodyJSON
-	requestBodyForm
-	requestBodyMultipart
+	vRequestBodyData tRequestBodyType = iota
+	vRequestBodyText
+	vRequestBodyHTML
+	vRequestBodyJSON
+	vRequestBodyForm
+	vRequestBodyMultipart
 )
 
 const (
@@ -35,7 +35,7 @@ const (
 	VRedirectResponseLast
 )
 
-type preparedBody struct {
+type tPreparedBody struct {
 	data        []byte
 	contentType string
 	multipart   *TMultipart
@@ -44,10 +44,10 @@ type QRequest struct {
 	url       string
 	method    string
 	header    THeader
-	cookies   []*http.Cookie
+	cookies   []*TCookie
 	cookieJar *QCookieJar
-	body      TBody
-	bodyKind  requestBodyKind
+	body      tRequestBody
+	bodyType  tRequestBodyType
 	bodyValue any
 	timeout   time.Duration
 	redirect  TRedirect
@@ -64,7 +64,7 @@ func New() *QRequest {
 	return &QRequest{
 		method:  "GET",
 		header:  THeader{},
-		cookies: []*http.Cookie{},
+		cookies: []*TCookie{},
 		timeout: 10 * time.Second,
 		redirect: TRedirect{
 			Max:          10,
@@ -141,7 +141,7 @@ func (this *QRequest) Cookie(cookieMap TValues) *QRequest {
 	this.cookies = nil
 
 	for key := range cookieMap {
-		this.cookies = append(this.cookies, &http.Cookie{
+		this.cookies = append(this.cookies, &TCookie{
 			Name:  key,
 			Value: cookieMap.Get(key),
 		})
@@ -160,84 +160,84 @@ func (this *QRequest) Transport(transport *QTransport) *QRequest {
 }
 // Data sets a raw request body.
 func (this *QRequest) Data(data []byte) *QRequest {
-	this.body = TBody{
-		Data: data,
+	this.body = tRequestBody{
+		data: data,
 	}
-	this.bodyKind = requestBodyData
+	this.bodyType = vRequestBodyData
 	this.bodyValue = nil
 	return this
 }
 // Text sets a plain text request body.
 func (this *QRequest) Text(text string) *QRequest {
-	this.body = TBody{
-		ContentType: "text/plain",
+	this.body = tRequestBody{
+		contentType: "text/plain",
 	}
-	this.bodyKind = requestBodyText
+	this.bodyType = vRequestBodyText
 	this.bodyValue = text
 	return this
 }
 // HTML sets an HTML request body.
 func (this *QRequest) HTML(html string) *QRequest {
-	this.body = TBody{
-		ContentType: "text/html",
+	this.body = tRequestBody{
+		contentType: "text/html",
 	}
-	this.bodyKind = requestBodyHTML
+	this.bodyType = vRequestBodyHTML
 	this.bodyValue = html
 	return this
 }
 // JSON sets a request body that is JSON-encoded when sent.
 func (this *QRequest) JSON(jsonData any) *QRequest {
-	this.body = TBody{
-		ContentType: "application/json",
+	this.body = tRequestBody{
+		contentType: "application/json",
 	}
-	this.bodyKind = requestBodyJSON
+	this.bodyType = vRequestBodyJSON
 	this.bodyValue = jsonData
 	return this
 }
 // Form sets a URL-encoded form request body.
 func (this *QRequest) Form(formMap TValues) *QRequest {
-	this.body = TBody{
-		ContentType: "application/x-www-form-urlencoded",
+	this.body = tRequestBody{
+		contentType: "application/x-www-form-urlencoded",
 	}
-	this.bodyKind = requestBodyForm
+	this.bodyType = vRequestBodyForm
 	this.bodyValue = formMap.Clone()
 	return this
 }
 // FormMultipart sets a multipart form body with fields and file paths.
 func (this *QRequest) FormMultipart(multipart TMultipart) *QRequest {
-	this.body = TBody{}
-	this.bodyKind = requestBodyMultipart
+	this.body = tRequestBody{}
+	this.bodyType = vRequestBodyMultipart
 	this.bodyValue = TMultipart{
 		Form: multipart.Form.Clone(),
 		File: multipart.File.Clone(),
 	}
 	return this
 }
-func (this *QRequest) prepareBody() (preparedBody, error) {
-	prepared := preparedBody{contentType: this.body.ContentType}
+func (this *QRequest) prepareBody() (tPreparedBody, error) {
+	prepared := tPreparedBody{contentType: this.body.contentType}
 
-	switch this.bodyKind {
-	case requestBodyData:
-		prepared.data = this.body.Data
-	case requestBodyText, requestBodyHTML:
+	switch this.bodyType {
+	case vRequestBodyData:
+		prepared.data = this.body.data
+	case vRequestBodyText, vRequestBodyHTML:
 		value, ok := this.bodyValue.(string)
 
 		if !ok {
-			return preparedBody{}, errors.New("riqu: invalid request body")
+			return tPreparedBody{}, errors.New("riqu: invalid request body")
 		}
 		prepared.data = []byte(value)
-	case requestBodyJSON:
+	case vRequestBodyJSON:
 		data, err := json.Marshal(this.bodyValue)
 
 		if err != nil {
-			return preparedBody{}, err
+			return tPreparedBody{}, err
 		}
 		prepared.data = data
-	case requestBodyForm:
+	case vRequestBodyForm:
 		formMap, ok := this.bodyValue.(TValues)
 
 		if !ok {
-			return preparedBody{}, errors.New("riqu: invalid form body")
+			return tPreparedBody{}, errors.New("riqu: invalid form body")
 		}
 		form := url.Values{}
 
@@ -245,15 +245,15 @@ func (this *QRequest) prepareBody() (preparedBody, error) {
 			form[key] = append([]string(nil), value...)
 		}
 		prepared.data = []byte(form.Encode())
-	case requestBodyMultipart:
+	case vRequestBodyMultipart:
 		formData, ok := this.bodyValue.(TMultipart)
 
 		if !ok {
-			return preparedBody{}, errors.New("riqu: invalid multipart body")
+			return tPreparedBody{}, errors.New("riqu: invalid multipart body")
 		}
 		prepared.multipart = &formData
 	default:
-		return preparedBody{}, errors.New("riqu: invalid request body type")
+		return tPreparedBody{}, errors.New("riqu: invalid request body type")
 	}
 	return prepared, nil
 }
@@ -474,7 +474,7 @@ func (this *QRequest) Send() error {
 	}
 	currentMethod := this.method
 	sendBody := currentMethod != "GET" && currentMethod != "HEAD" ||
-		this.bodyKind != requestBodyData || this.body.Data != nil
+		this.bodyType != vRequestBodyData || this.body.data != nil
 	redirectCount := 0
 	initialRequest := &http.Request{Header: http.Header(this.header.Clone())}
 
@@ -599,7 +599,7 @@ func (this *QRequest) Send() error {
 			}
 		}
 		follow := redirectCount < this.redirect.Max &&
-			IsRedirectStatus(httpRes.StatusCode) &&
+			isRedirectStatus(httpRes.StatusCode) &&
 			httpRes.Header.Get("Location") != ""
 
 		if !follow {

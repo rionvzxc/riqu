@@ -58,20 +58,20 @@ func TestResponseHandlesUnavailableAndEmptyBodies(t *testing.T) {
 	}
 }
 
-type testReadCloser struct {
+type tTestReadCloser struct {
 	io.Reader
 	closeErr   error
 	closeCount int
 }
 
-func (this *testReadCloser) Close() error {
+func (this *tTestReadCloser) Close() error {
 	this.closeCount++
 	return this.closeErr
 }
 
 func TestResponseDataReturnsCloseError(t *testing.T) {
 	closeErr := errors.New("close failed")
-	body := &testReadCloser{
+	body := &tTestReadCloser{
 		Reader:   strings.NewReader("response body"),
 		closeErr: closeErr,
 	}
@@ -91,7 +91,7 @@ func TestResponseDataReturnsCloseError(t *testing.T) {
 
 func TestResponseJSONReturnsCloseError(t *testing.T) {
 	closeErr := errors.New("close failed")
-	body := &testReadCloser{
+	body := &tTestReadCloser{
 		Reader:   strings.NewReader(`{"ok":true}`),
 		closeErr: closeErr,
 	}
@@ -124,7 +124,7 @@ func TestResponseJSONRejectsTrailingData(t *testing.T) {
 		{"incomplete value", " {", true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			body := &testReadCloser{Reader: strings.NewReader(`{"ok":true}` + tt.trailing)}
+			body := &tTestReadCloser{Reader: strings.NewReader(`{"ok":true}` + tt.trailing)}
 			response := &QResponse{body: body}
 			var data map[string]bool
 
@@ -181,7 +181,7 @@ func TestResponseFileReplacesDestinationOnlyOnSuccess(t *testing.T) {
 			if err := os.WriteFile(path, []byte("old content"), 0600); err != nil {
 				t.Fatal(err)
 			}
-			body := &testReadCloser{Reader: tt.reader, closeErr: tt.closeErr}
+			body := &tTestReadCloser{Reader: tt.reader, closeErr: tt.closeErr}
 			response := &QResponse{body: body}
 			if err := response.File(&TFileOptions{Dir: dir, Filename: filename}); !errors.Is(err, tt.wantErr) {
 				t.Fatalf("File returned %v, want %v", err, tt.wantErr)
@@ -209,7 +209,7 @@ func TestResponseFileReplacesDestinationOnlyOnSuccess(t *testing.T) {
 
 func TestHandleResponseReturnsCloseError(t *testing.T) {
 	closeErr := errors.New("close failed")
-	body := &testReadCloser{
+	body := &tTestReadCloser{
 		Reader:   strings.NewReader("response body"),
 		closeErr: closeErr,
 	}
@@ -225,7 +225,7 @@ func TestHandleResponseReturnsCloseError(t *testing.T) {
 }
 
 func TestHandleResponseClosesBodyWhenCallbackPanics(t *testing.T) {
-	body := &testReadCloser{Reader: strings.NewReader("response body")}
+	body := &tTestReadCloser{Reader: strings.NewReader("response body")}
 	response := &QResponse{body: body}
 	request := New().OnSuccess(func(*QResponse) {
 		panic("callback panic")

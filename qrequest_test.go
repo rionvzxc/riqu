@@ -202,24 +202,24 @@ func TestHeaderContentTypeOverridesBodyContentType(t *testing.T) {
 func TestBodySerializationIsDeferredUntilSend(t *testing.T) {
 	request := New().POST("http://example.test").
 		Text("plain text")
-	if len(request.body.Data) != 0 {
+	if len(request.body.data) != 0 {
 		t.Fatal("Text body was converted to bytes before Send")
 	}
 	request.Form(TValues{"name": {"riqu"}})
-	if len(request.body.Data) != 0 {
+	if len(request.body.data) != 0 {
 		t.Fatal("Form body was encoded before Send")
 	}
 	request.HTML("<p>html</p>")
-	if len(request.body.Data) != 0 {
+	if len(request.body.data) != 0 {
 		t.Fatal("HTML body was converted to bytes before Send")
 	}
 }
 
-type countingJSONMarshaler struct {
+type tCountingJSONMarshaler struct {
 	calls *int
 }
 
-func (this countingJSONMarshaler) MarshalJSON() ([]byte, error) {
+func (this tCountingJSONMarshaler) MarshalJSON() ([]byte, error) {
 	*this.calls++
 	return []byte(`{"value":"sent"}`), nil
 }
@@ -231,7 +231,7 @@ func TestJSONMarshalingIsDeferredUntilSend(t *testing.T) {
 	defer server.Close()
 
 	calls := 0
-	request := New().POST(server.URL).JSON(countingJSONMarshaler{calls: &calls})
+	request := New().POST(server.URL).JSON(tCountingJSONMarshaler{calls: &calls})
 	if calls != 0 {
 		t.Fatal("JSON was marshaled before Send")
 	}
@@ -244,7 +244,7 @@ func TestJSONMarshalingIsDeferredUntilSend(t *testing.T) {
 }
 
 func TestMultipartStreamsAndReplaysFilesOn307(t *testing.T) {
-	type requestResult struct {
+	type tRequestResult struct {
 		path             string
 		contentType      string
 		contentLength    int64
@@ -260,9 +260,9 @@ func TestMultipartStreamsAndReplaysFilesOn307(t *testing.T) {
 	if err := os.WriteFile(filePath, []byte(contents), 0600); err != nil {
 		t.Fatal(err)
 	}
-	results := make(chan requestResult, 2)
+	results := make(chan tRequestResult, 2)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
-		result := requestResult{
+		result := tRequestResult{
 			path:             request.URL.Path,
 			contentType:      request.Header.Get("Content-Type"),
 			contentLength:    request.ContentLength,
