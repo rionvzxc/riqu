@@ -34,8 +34,10 @@ type TRedirect struct {
 }
 // tRequestBody stores request body data and its content type.
 type tRequestBody struct {
-	// data contains the request body bytes.
-	data []byte
+	// bodyType selects how value is encoded when sent.
+	bodyType tRequestBodyType
+	// value contains raw bytes or the value to encode.
+	value any
 	// contentType is the media type sent with the request body.
 	contentType string
 }

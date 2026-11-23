@@ -31,80 +31,85 @@ type tPreparedBody struct {
 // Data sets a raw request body.
 func (this *QRequest) Data(data []byte) *QRequest {
 	this.body = tRequestBody{
-		data: data,
+		bodyType: vRequestBodyData,
+		value:    data,
 	}
-	this.bodyType = vRequestBodyData
-	this.bodyValue = nil
 	return this
 }
 // Text sets a plain text request body.
 func (this *QRequest) Text(text string) *QRequest {
 	this.body = tRequestBody{
+		bodyType:    vRequestBodyText,
+		value:       text,
 		contentType: "text/plain",
 	}
-	this.bodyType = vRequestBodyText
-	this.bodyValue = text
 	return this
 }
 // HTML sets an HTML request body.
 func (this *QRequest) HTML(html string) *QRequest {
 	this.body = tRequestBody{
+		bodyType:    vRequestBodyHTML,
+		value:       html,
 		contentType: "text/html",
 	}
-	this.bodyType = vRequestBodyHTML
-	this.bodyValue = html
 	return this
 }
 // JSON sets a request body that is JSON-encoded when sent.
 func (this *QRequest) JSON(jsonData any) *QRequest {
 	this.body = tRequestBody{
+		bodyType:    vRequestBodyJSON,
+		value:       jsonData,
 		contentType: "application/json",
 	}
-	this.bodyType = vRequestBodyJSON
-	this.bodyValue = jsonData
 	return this
 }
 // Form sets a URL-encoded form request body.
 func (this *QRequest) Form(formMap TValues) *QRequest {
 	this.body = tRequestBody{
+		bodyType:    vRequestBodyForm,
+		value:       formMap.Clone(),
 		contentType: "application/x-www-form-urlencoded",
 	}
-	this.bodyType = vRequestBodyForm
-	this.bodyValue = formMap.Clone()
 	return this
 }
 // FormMultipart sets a multipart form body with fields and file paths.
 func (this *QRequest) FormMultipart(multipart TMultipart) *QRequest {
-	this.body = tRequestBody{}
-	this.bodyType = vRequestBodyMultipart
-	this.bodyValue = TMultipart{
-		Form: multipart.Form.Clone(),
-		File: multipart.File.Clone(),
+	this.body = tRequestBody{
+		bodyType: vRequestBodyMultipart,
+		value: TMultipart{
+			Form: multipart.Form.Clone(),
+			File: multipart.File.Clone(),
+		},
 	}
 	return this
 }
 func (this *QRequest) prepareBody() (tPreparedBody, error) {
 	prepared := tPreparedBody{contentType: this.body.contentType}
 
-	switch this.bodyType {
+	switch this.body.bodyType {
 	case vRequestBodyData:
-		prepared.data = this.body.data
+		data, ok := this.body.value.([]byte)
+
+		if !ok && this.body.value != nil {
+			return tPreparedBody{}, errors.New("riqu: invalid raw body")
+		}
+		prepared.data = data
 	case vRequestBodyText, vRequestBodyHTML:
-		value, ok := this.bodyValue.(string)
+		value, ok := this.body.value.(string)
 
 		if !ok {
 			return tPreparedBody{}, errors.New("riqu: invalid request body")
 		}
 		prepared.data = []byte(value)
 	case vRequestBodyJSON:
-		data, err := json.Marshal(this.bodyValue)
+		data, err := json.Marshal(this.body.value)
 
 		if err != nil {
 			return tPreparedBody{}, err
 		}
 		prepared.data = data
 	case vRequestBodyForm:
-		formMap, ok := this.bodyValue.(TValues)
+		formMap, ok := this.body.value.(TValues)
 
 		if !ok {
 			return tPreparedBody{}, errors.New("riqu: invalid form body")
@@ -116,7 +121,7 @@ func (this *QRequest) prepareBody() (tPreparedBody, error) {
 		}
 		prepared.data = []byte(form.Encode())
 	case vRequestBodyMultipart:
-		formData, ok := this.bodyValue.(TMultipart)
+		formData, ok := this.body.value.(TMultipart)
 
 		if !ok {
 			return tPreparedBody{}, errors.New("riqu: invalid multipart body")

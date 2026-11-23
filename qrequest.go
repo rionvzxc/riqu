@@ -25,8 +25,6 @@ type QRequest struct {
 	cookies   TCookies
 	cookieJar *QCookieJar
 	body      tRequestBody
-	bodyType  tRequestBodyType
-	bodyValue any
 	timeout   time.Duration
 	redirect  TRedirect
 	query     TValues
@@ -220,7 +218,7 @@ func (this *QRequest) Send() error {
 	}
 	currentMethod := this.method
 	sendBody := currentMethod != "GET" && currentMethod != "HEAD" ||
-		this.bodyType != vRequestBodyData || this.body.data != nil
+		this.body.bodyType != vRequestBodyData || preparedBody.data != nil
 	redirectCount := 0
 	initialRequest := &http.Request{Header: http.Header(this.header.Clone())}
 

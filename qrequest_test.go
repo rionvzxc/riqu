@@ -202,15 +202,15 @@ func TestHeaderContentTypeOverridesBodyContentType(t *testing.T) {
 func TestBodySerializationIsDeferredUntilSend(t *testing.T) {
 	request := New().POST("http://example.test").
 		Text("plain text")
-	if len(request.body.data) != 0 {
+	if _, ok := request.body.value.(string); !ok {
 		t.Fatal("Text body was converted to bytes before Send")
 	}
 	request.Form(TValues{"name": {"riqu"}})
-	if len(request.body.data) != 0 {
+	if _, ok := request.body.value.(TValues); !ok {
 		t.Fatal("Form body was encoded before Send")
 	}
 	request.HTML("<p>html</p>")
-	if len(request.body.data) != 0 {
+	if _, ok := request.body.value.(string); !ok {
 		t.Fatal("HTML body was converted to bytes before Send")
 	}
 }
