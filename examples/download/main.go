@@ -18,8 +18,8 @@ func main() {
 				return
 			}
 			fmt.Println("Download Success!")
-			fmt.Println("Status:", res.StatusCode)
-			fmt.Println("Content-Type:", res.Header.Get("Content-Type"))
+			fmt.Println("Status:", res.StatusCode())
+			fmt.Println("Content-Type:", res.Header("Content-Type", ""))
 		}).
 		OnError(func(err error) {
 			fmt.Println("Error:", err)

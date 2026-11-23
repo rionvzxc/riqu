@@ -20,11 +20,11 @@ func main() {
 			var data struct {
 				JSON riqu.TMap `json:"json"`
 			}
-			if err := res.JSON(&data); err != nil {
+			if err := res.BindJSON(&data); err != nil {
 				fmt.Println("JSON Error:", err)
 				return
 			}
-			fmt.Println("Status:", res.StatusCode)
+			fmt.Println("Status:", res.StatusCode())
 			fmt.Println("Response JSON:")
 
 			for key, value := range data.JSON {

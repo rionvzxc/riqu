@@ -637,7 +637,7 @@ func TestSendZeroRedirectConfigurationDoesNotFollow(t *testing.T) {
 	err := New().GET(server.URL + "/start").
 		Redirect(TRedirect{}).
 		OnSuccess(func(response *QResponse) {
-			statusCode = response.StatusCode
+			statusCode = response.StatusCode()
 		}).
 		Send()
 	if err != nil {

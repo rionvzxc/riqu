@@ -25,7 +25,7 @@ func TestStatusHandlersDispatchOnceAndFallback(t *testing.T) {
 			Redirect(TRedirect{Max: 1, ResponseMode: mode}).
 			OnSuccess(func(*QResponse) { fallback++ }).
 			OnStatuses([]int{302, 404, 404}, func(response *QResponse) {
-				called = append(called, response.StatusCode)
+				called = append(called, response.StatusCode())
 			}).
 			OnStatus(404, func(response *QResponse) {
 				called = append(called, 404)

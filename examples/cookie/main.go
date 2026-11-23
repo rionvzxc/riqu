@@ -28,7 +28,7 @@ func main() {
 				return
 			}
 			fmt.Println("Response:")
-			fmt.Println("Status:", res.StatusCode)
+			fmt.Println("Status:", res.StatusCode())
 			fmt.Println(text)
 		}).
 		OnError(func(err error) {

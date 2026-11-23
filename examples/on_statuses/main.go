@@ -9,7 +9,7 @@ import (
 
 func main() {
 	handleUnavailable := func(res *riqu.QResponse) {
-		fmt.Println("Service unavailable, try again later. Status:", res.StatusCode)
+		fmt.Println("Service unavailable, try again later. Status:", res.StatusCode())
 	}
 
 	riqu.New().
@@ -19,7 +19,7 @@ func main() {
 			http.StatusServiceUnavailable,
 		}, handleUnavailable).
 		OnSuccess(func(res *riqu.QResponse) {
-			fmt.Println("Status:", res.StatusCode)
+			fmt.Println("Status:", res.StatusCode())
 		}).
 		OnError(func(err error) {
 			fmt.Println("Error:", err)

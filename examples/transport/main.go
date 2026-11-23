@@ -30,7 +30,7 @@ func main() {
 			var text string
 			text, bodyErr = response.Text()
 			if bodyErr == nil {
-				fmt.Println("Status:", response.StatusCode)
+				fmt.Println("Status:", response.StatusCode())
 				fmt.Println(text)
 			}
 		}).Send()

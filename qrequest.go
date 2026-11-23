@@ -131,7 +131,7 @@ func (this *QRequest) handleResponse(response *QResponse) (err error) {
 		}
 	}()
 
-	if callbackFunc := this.onStatusFunc[response.StatusCode]; callbackFunc != nil {
+	if callbackFunc := this.onStatusFunc[response.StatusCode()]; callbackFunc != nil {
 		callbackFunc(response)
 	} else if this.onSuccessFunc != nil {
 		this.onSuccessFunc(response)
@@ -329,12 +329,12 @@ func (this *QRequest) Send() error {
 			}
 		}
 		qRes := &QResponse{
-			StatusCode:    httpRes.StatusCode,
-			Status:        httpRes.Status,
-			Header:        httpRes.Header.Clone(),
-			Cookies:       httpRes.Cookies(),
-			RequestUrl:    currentUrl,
-			RequestMethod: currentMethod,
+			statusCode:    httpRes.StatusCode,
+			status:        httpRes.Status,
+			resHeader:     THeader(httpRes.Header).Clone(),
+			resCookie:     httpRes.Cookies(),
+			resUrl:        currentUrl,
+			resMethod:     currentMethod,
 			body:          httpRes.Body,
 		}
 

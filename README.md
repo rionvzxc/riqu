@@ -45,7 +45,7 @@ func main() {
                 fmt.Println("Error:", err)
                 return
             }
-            fmt.Println(res.StatusCode)
+            fmt.Println(res.StatusCode())
             fmt.Println(text)
         }).
         OnError(func(err error) {
@@ -75,7 +75,7 @@ err = riqu.New().
     GET("https://httpbin.org/get").
     Transport(transport).
     OnSuccess(func(res *riqu.QResponse) {
-        fmt.Println("Status:", res.StatusCode)
+        fmt.Println("Status:", res.StatusCode())
     }).
     Send()
 if err != nil {
@@ -92,6 +92,8 @@ Runnable examples are available in the repository:
 | [basic](https://github.com/rionvzxc/riqu/tree/main/examples/basic) | Basic HTTP request |
 | [basic2](https://github.com/rionvzxc/riqu/tree/main/examples/basic2) | Basic request example |
 | [header](https://github.com/rionvzxc/riqu/tree/main/examples/header) | Custom request headers |
+| [query](https://github.com/rionvzxc/riqu/tree/main/examples/query) | Query setters, response query access, and binding |
+| [response_binding](https://github.com/rionvzxc/riqu/tree/main/examples/response_binding) | Response header and cookie access and binding |
 | [cookie](https://github.com/rionvzxc/riqu/tree/main/examples/cookie) | Cookie Jar management |
 | [post_json](https://github.com/rionvzxc/riqu/tree/main/examples/post_json) | JSON request and response |
 | [post_form](https://github.com/rionvzxc/riqu/tree/main/examples/post_form) | Form URL-encoded request |

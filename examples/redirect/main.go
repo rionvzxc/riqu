@@ -16,9 +16,9 @@ func main() {
 				fmt.Println("Error:", err)
 				return
 			}
-			fmt.Println("Status:", res.StatusCode)
-			fmt.Println("Request URL:", res.RequestUrl)
-			fmt.Println("Request Method:", res.RequestMethod)
+			fmt.Println("Status:", res.StatusCode())
+			fmt.Println("Request URL:", res.Url())
+			fmt.Println("Request Method:", res.Method())
 			fmt.Println(text)
 		}).
 		OnError(func(err error) {
