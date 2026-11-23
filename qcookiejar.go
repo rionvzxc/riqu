@@ -20,7 +20,7 @@ func NewCookieJar(options *TJarOptions) (*QCookieJar, error) {
 	return &QCookieJar{jar: jar}, nil
 }
 // Cookies returns cookies applicable to rawURL.
-func (this *QCookieJar) Cookies(rawURL string) ([]*TCookie, error) {
+func (this *QCookieJar) Cookies(rawURL string) (TCookies, error) {
 	if this == nil || this.jar == nil {
 		return nil, nil
 	}
@@ -32,7 +32,7 @@ func (this *QCookieJar) Cookies(rawURL string) ([]*TCookie, error) {
 	return this.jar.Cookies(u), nil
 }
 // SetCookies stores cookies for rawURL.
-func (this *QCookieJar) SetCookies(rawURL string, cookies []*TCookie) error {
+func (this *QCookieJar) SetCookies(rawURL string, cookies TCookies) error {
 	if this == nil || this.jar == nil {
 		return nil
 	}

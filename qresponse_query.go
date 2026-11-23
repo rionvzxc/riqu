@@ -8,12 +8,11 @@ import (
 // Query returns the first query value for name or defaultValue when absent.
 // Query values are read from the URL that produced this response.
 func (this *QResponse) Query(name string, defaultValue string) string {
-	values := this.QueryValues(name)
-
-	if len(values) == 0 {
+	if this == nil {
 		return defaultValue
 	}
-	return values[0]
+	this.parseQuery()
+	return this.resQuery.GetDefault(name, defaultValue)
 }
 // QueryValues returns a copy of all query values for name.
 // Invalid query parameters are skipped; BindQuery reports parsing errors.

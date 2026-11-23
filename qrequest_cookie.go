@@ -2,20 +2,13 @@ package riqu
 
 // SetCookie replaces the request cookie values for name.
 func (this *QRequest) SetCookie(name string, values ...string) *QRequest {
-	cookies := make([]*TCookie, 0, len(this.cookies))
-
-	for _, cookie := range this.cookies {
-		if cookie.Name != name {
-			cookies = append(cookies, cookie)
-		}
-	}
-	this.cookies = cookies
+	this.cookies.Del(name)
 	return this.AddCookie(name, values...)
 }
 // AddCookie appends request cookie values for name.
 func (this *QRequest) AddCookie(name string, values ...string) *QRequest {
 	for _, value := range values {
-		this.cookies = append(this.cookies, &TCookie{Name: name, Value: value})
+		this.cookies.Add(TCookie{Name: name, Value: value})
 	}
 	return this
 }

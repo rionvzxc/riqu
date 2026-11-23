@@ -16,14 +16,27 @@ func (this THeader) Add(name string, values ...string) {
 }
 // Get returns the first value for an HTTP header.
 func (this THeader) Get(name string) string {
+	return this.GetDefault(name, "")
+}
+// GetDefault returns the first value for an HTTP header, or defaultValue when no values exist.
+func (this THeader) GetDefault(name string, defaultValue string) string {
+	values := this[http.CanonicalHeaderKey(name)]
+
+	if len(values) == 0 {
+		return defaultValue
+	}
+	return values[0]
+}
+// GetLast returns the last value for an HTTP header, or an empty string.
+func (this THeader) GetLast(name string) string {
 	values := this[http.CanonicalHeaderKey(name)]
 
 	if len(values) == 0 {
 		return ""
 	}
-	return values[0]
+	return values[len(values)-1]
 }
-// GetAll returns all values for an HTTP header.
+// GetAll returns a copy of all values for an HTTP header.
 func (this THeader) GetAll(name string) []string {
 	return append([]string(nil), this[http.CanonicalHeaderKey(name)]...)
 }
@@ -36,7 +49,7 @@ func (this THeader) Exist(name string) bool {
 func (this THeader) Del(name string) {
 	delete(this, http.CanonicalHeaderKey(name))
 }
-// Clone returns an independent copy of the header map.
+// Clone returns an independent copy with canonical header names.
 func (this THeader) Clone() THeader {
 	if this == nil {
 		return nil
@@ -50,12 +63,12 @@ func (this THeader) Clone() THeader {
 			if _, exists := header[canonicalName]; !exists {
 				header[canonicalName] = nil
 			}
-		} else {
-			if _, exists := header[canonicalName]; !exists {
-				header[canonicalName] = make([]string, 0, len(values))
-			}
-			header[canonicalName] = append(header[canonicalName], values...)
+			continue
 		}
+		if _, exists := header[canonicalName]; !exists {
+			header[canonicalName] = make([]string, 0, len(values))
+		}
+		header[canonicalName] = append(header[canonicalName], values...)
 	}
 	return header
 }

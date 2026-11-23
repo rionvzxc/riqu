@@ -109,3 +109,22 @@ func TestTValuesClonePreservesNilMap(t *testing.T) {
 		t.Fatal("expected nil map clone to remain nil")
 	}
 }
+func TestTValuesGetDefaultAndLast(t *testing.T) {
+	values := TValues{"name": {"first", "last"}, "empty": {}}
+
+	if got := values.GetDefault("name", "fallback"); got != "first" {
+		t.Fatalf("GetDefault(name) = %q, want first", got)
+	}
+	if got := values.GetDefault("missing", "fallback"); got != "fallback" {
+		t.Fatalf("GetDefault(missing) = %q, want fallback", got)
+	}
+	if got := values.Get("name"); got != "first" {
+		t.Fatalf("Get(name) = %q, want first", got)
+	}
+	if got := values.GetLast("name"); got != "last" {
+		t.Fatalf("GetLast(name) = %q, want last", got)
+	}
+	if got := values.GetLast("empty"); got != "" {
+		t.Fatalf("GetLast(empty) = %q, want empty", got)
+	}
+}

@@ -10,7 +10,7 @@ type QResponse struct {
 	statusCode    int
 	status        string
 	resHeader     THeader
-	resCookie     []*TCookie
+	resCookie     TCookies
 	resUrl        string
 	resMethod     string
 	resQuery      TValues

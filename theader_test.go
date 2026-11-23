@@ -71,3 +71,19 @@ func TestTHeaderClonePreservesNilMap(t *testing.T) {
 		t.Fatal("expected nil map clone to remain nil")
 	}
 }
+func TestTHeaderGetDefaultAndLast(t *testing.T) {
+	header := THeader{"X-Test": {"first", "last"}}
+
+	if got := header.GetDefault("x-test", "fallback"); got != "first" {
+		t.Fatalf("GetDefault(X-Test) = %q, want first", got)
+	}
+	if got := header.GetDefault("missing", "fallback"); got != "fallback" {
+		t.Fatalf("GetDefault(missing) = %q, want fallback", got)
+	}
+	if got := header.Get("X-Test"); got != "first" {
+		t.Fatalf("Get(X-Test) = %q, want first", got)
+	}
+	if got := header.GetLast("x-test"); got != "last" {
+		t.Fatalf("GetLast(X-Test) = %q, want last", got)
+	}
+}

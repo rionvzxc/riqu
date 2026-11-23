@@ -22,7 +22,7 @@ type QRequest struct {
 	url       string
 	method    string
 	header    THeader
-	cookies   []*TCookie
+	cookies   TCookies
 	cookieJar *QCookieJar
 	body      tRequestBody
 	bodyType  tRequestBodyType
@@ -43,7 +43,7 @@ func New() *QRequest {
 	return &QRequest{
 		method:  "GET",
 		header:  THeader{},
-		cookies: []*TCookie{},
+		cookies: TCookies{},
 		timeout: 10 * time.Second,
 		redirect: TRedirect{
 			Max:          10,

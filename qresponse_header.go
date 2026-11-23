@@ -4,12 +4,10 @@ import "fmt"
 
 // Header returns the first response header value or defaultValue when absent.
 func (this *QResponse) Header(name string, defaultValue string) string {
-	values := this.HeaderValues(name)
-
-	if len(values) == 0 {
+	if this == nil {
 		return defaultValue
 	}
-	return values[0]
+	return this.resHeader.GetDefault(name, defaultValue)
 }
 // HeaderValues returns a copy of all response header values for name.
 func (this *QResponse) HeaderValues(name string) []string {
