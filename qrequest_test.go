@@ -33,7 +33,7 @@ func TestSendPreservesCookieOnSameOriginRedirect(t *testing.T) {
 	var responseBody string
 	var responseErr error
 	err := New().GET(server.URL + "/start").
-		Cookie(TValues{"session": {"secret"}}).
+		SetAllCookies(TValues{"session": {"secret"}}).
 		OnSuccess(func(res *QResponse) {
 			responseBody, responseErr = res.Text()
 		}).
@@ -71,8 +71,8 @@ func TestSendDoesNotRestoreSensitiveHeadersAfterCrossOriginRedirect(t *testing.T
 	var responseBody string
 	var responseErr error
 	err := New().GET(serverA.URL + "/start").
-		Header(THeader{"Authorization": []string{"Bearer secret"}}).
-		Cookie(TValues{"session": {"secret"}}).
+		SetAllHeaders(THeader{"Authorization": []string{"Bearer secret"}}).
+		SetAllCookies(TValues{"session": {"secret"}}).
 		OnSuccess(func(res *QResponse) {
 			responseBody, responseErr = res.Text()
 		}).
@@ -185,9 +185,9 @@ func TestHeaderContentTypeOverridesBodyContentType(t *testing.T) {
 
 			request := New().POST(server.URL)
 			if headerFirst {
-				request.Header(THeader{"Content-Type": []string{"application/custom"}}).Text("plain text")
+				request.SetAllHeaders(THeader{"Content-Type": []string{"application/custom"}}).Text("plain text")
 			} else {
-				request.Text("plain text").Header(THeader{"Content-Type": []string{"application/custom"}})
+				request.Text("plain text").SetAllHeaders(THeader{"Content-Type": []string{"application/custom"}})
 			}
 			if err := request.Send(); err != nil {
 				t.Fatal(err)
@@ -300,7 +300,7 @@ func TestMultipartStreamsAndReplaysFilesOn307(t *testing.T) {
 	var responseBody string
 	var responseErr error
 	err := New().POST(server.URL + "/start").
-		Header(THeader{"Content-Type": []string{contentType}}).
+		SetAllHeaders(THeader{"Content-Type": []string{contentType}}).
 		FormMultipart(TMultipart{
 			Form: TValues{"name": {"riqu", "second"}},
 			File: TValues{"upload": {filePath}},
@@ -355,7 +355,7 @@ func TestMultipartAddsMissingBoundary(t *testing.T) {
 			var responseBody string
 			var responseErr error
 			err := New().POST(server.URL).
-				Header(THeader{"Content-Type": {contentType}}).
+				SetAllHeaders(THeader{"Content-Type": {contentType}}).
 				FormMultipart(TMultipart{Form: TValues{"name": {"riqu"}}}).
 				OnSuccess(func(response *QResponse) {
 					responseBody, responseErr = response.Text()
@@ -607,10 +607,10 @@ func TestSendClearsNilHeadersAndCookies(t *testing.T) {
 	defer server.Close()
 
 	err := New().GET(server.URL).
-		Header(THeader{"X-Test": []string{"value"}}).
-		Header(nil).
-		Cookie(TValues{"session": {"secret"}}).
-		Cookie(nil).
+		SetAllHeaders(THeader{"X-Test": []string{"value"}}).
+		SetAllHeaders(nil).
+		SetAllCookies(TValues{"session": {"secret"}}).
+		SetAllCookies(nil).
 		Send()
 	if err != nil {
 		t.Fatal(err)

@@ -26,8 +26,8 @@ func TestRedirectUpdatesAndDeletesManualCookies(t *testing.T) {
 			var text string
 			var readErr error
 			request := New().GET(server.URL).
-				Header(THeader{"Cookie": {"session=header; keep=value"}}).
-				Cookie(TValues{"session": {"old"}}).CookieJar(jar).
+				SetAllHeaders(THeader{"Cookie": {"session=header; keep=value"}}).
+				SetAllCookies(TValues{"session": {"old"}}).CookieJar(jar).
 				OnSuccess(func(response *QResponse) { text, readErr = response.Text() })
 			for i := 0; i < 2; i++ {
 				if err := request.Send(); err != nil {
@@ -42,5 +42,39 @@ func TestRedirectUpdatesAndDeletesManualCookies(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestRequestCookieSetAndAdd(t *testing.T) {
+	values := TValues{"session": {"old"}, "keep": {"yes"}}
+	request := New().SetAllCookies(values).
+		SetCookie("session", "one", "two").AddCookie("session", "three")
+	values["keep"][0] = "changed"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var sessions []string
+		for _, cookie := range r.Cookies() {
+			if cookie.Name == "session" {
+				sessions = append(sessions, cookie.Value)
+			}
+		}
+		if len(sessions) != 3 || sessions[0] != "one" || sessions[1] != "two" || sessions[2] != "three" {
+			t.Errorf("unexpected cookies: %v", sessions)
+		}
+		cookie, err := r.Cookie("keep")
+		if err != nil || cookie.Value != "yes" {
+			t.Errorf("request cookies must be copied: %v", err)
+		}
+	}))
+	defer server.Close()
+	if err := request.GET(server.URL).Send(); err != nil {
+		t.Fatal(err)
+	}
+	request.SetCookie("session")
+	if len(request.cookies) != 1 || request.cookies[0].Name != "keep" {
+		t.Fatalf("SetCookie without values must remove the named cookie: %v", request.cookies)
+	}
+	request.SetAllCookies(nil)
+	if len(request.cookies) != 0 {
+		t.Fatal("SetAllCookies(nil) must clear cookies")
 	}
 }

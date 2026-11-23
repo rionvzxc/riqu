@@ -17,10 +17,11 @@ func TestQueryUpdatesAndRepeatedSend(t *testing.T) {
 	defer server.Close()
 	values := TValues{"lang": {"coba"}, "q": {"go http & client"}}
 	request := New().GET(server.URL + "?lang=id&keep=yes&remove=old").
-		AddQuery(TValues{"lang": {"discard"}}).
-		Query(values).
-		Query(TValues{"remove": nil}).
-		AddQuery(TValues{"lang": {"en"}, "tag": {"go", "http"}})
+		AddQuery("lang", "discard").
+		SetQuery("lang", values["lang"]...).
+		SetQuery("q", values["q"]...).
+		SetQuery("remove").
+		AddQuery("lang", "en").AddQuery("tag", "go", "http")
 	values["lang"][0] = "mutated"
 	for i := 0; i < 2; i++ {
 		if err := request.Send(); err != nil {
@@ -47,9 +48,41 @@ func TestAddQueryPreservesURLValuesAndRedirectQuery(t *testing.T) {
 	defer server.Close()
 	var text string
 	var readErr error
-	err := New().AddQuery(TValues{"lang": {"coba"}}).GET(server.URL + "?lang=id").
+	err := New().AddQuery("lang", "coba").GET(server.URL + "?lang=id").
 		OnSuccess(func(response *QResponse) { text, readErr = response.Text() }).Send()
 	if err != nil || readErr != nil || text != "lang=redirect" {
 		t.Fatalf("unexpected redirect result: %q, %v, %v", text, err, readErr)
+	}
+}
+
+func TestSetAllQueriesReplacesURLAndConfiguredValues(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		fmt.Fprint(w, request.URL.RequestURI())
+	}))
+	defer server.Close()
+	values := TValues{"lang": {"id"}, "tag": {"go", "http"}}
+	request := New().GET(server.URL + "/?old=value").
+		SetQuery("discard", "old").AddQuery("discard", "older").
+		SetAllQueries(values).AddQuery("lang", "en").SetQuery("tag", "new")
+	values["lang"][0] = "changed"
+	var text string
+	var readErr error
+	request.OnSuccess(func(response *QResponse) { text, readErr = response.Text() })
+	for i := 0; i < 2; i++ {
+		if err := request.Send(); err != nil {
+			t.Fatal(err)
+		}
+		if readErr != nil || text != "/?lang=id&lang=en&tag=new" {
+			t.Fatalf("unexpected replacement query: %q, %v", text, readErr)
+		}
+	}
+	for _, empty := range []TValues{nil, {}} {
+		request.Url(server.URL + "/?old=value").SetAllQueries(empty)
+		if err := request.Send(); err != nil {
+			t.Fatal(err)
+		}
+		if readErr != nil || text != "/" {
+			t.Fatalf("expected entire query to be cleared, got %q, %v", text, readErr)
+		}
 	}
 }

@@ -17,6 +17,9 @@ func main() {
 	riqu.New().
 		CookieJar(cookieJar).
 		GET("https://httpbin.org/cookies/set?session_id=abc123456&username=riqu").
+		SetAllCookies(riqu.TValues{"theme": {"light"}}).
+		SetCookie("theme", "dark").
+		AddCookie("language", "id").
 		OnSuccess(func(res *riqu.QResponse) {
 			text, err := res.Text()
 
