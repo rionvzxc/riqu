@@ -1,9 +1,5 @@
 package riqu
 
-// UserAgent replaces the User-Agent request header.
-func (this *QRequest) UserAgent(value string) *QRequest {
-	return this.SetHeader("User-Agent", value)
-}
 // SetHeader replaces the request values for name.
 func (this *QRequest) SetHeader(name string, values ...string) *QRequest {
 	if this.header == nil {
