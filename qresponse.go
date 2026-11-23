@@ -9,6 +9,7 @@ import (
 type QResponse struct {
 	statusCode    int
 	status        string
+	contentLength int64
 	resHeader     THeader
 	resCookie     TCookies
 	resUrl        string
@@ -32,6 +33,14 @@ func (this *QResponse) Status() string {
 		return ""
 	}
 	return this.status
+}
+// ContentLength returns the response body length in bytes, or -1 when unknown.
+// A nil response also returns -1.
+func (this *QResponse) ContentLength() int64 {
+	if this == nil {
+		return -1
+	}
+	return this.contentLength
 }
 // Url returns the URL used for this response.
 func (this *QResponse) Url() string {

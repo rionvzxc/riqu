@@ -53,3 +53,20 @@ func TestRequestHeaderSetAndAdd(t *testing.T) {
 		t.Fatalf("unexpected replaced headers: %v", request.header)
 	}
 }
+
+func TestRequestUserAgent(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		if got := request.UserAgent(); got != "riqu-example/1.0" {
+			t.Errorf("unexpected User-Agent: %q", got)
+		}
+		if len(request.Header.Values("User-Agent")) != 1 {
+			t.Error("expected one User-Agent value")
+		}
+	}))
+	defer server.Close()
+	err := New().GET(server.URL).
+		SetHeader("User-Agent", "old").UserAgent("riqu-example/1.0").Send()
+	if err != nil {
+		t.Fatal(err)
+	}
+}

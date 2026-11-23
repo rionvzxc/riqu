@@ -331,6 +331,7 @@ func (this *QRequest) Send() error {
 		qRes := &QResponse{
 			statusCode:    httpRes.StatusCode,
 			status:        httpRes.Status,
+			contentLength: httpRes.ContentLength,
 			resHeader:     THeader(httpRes.Header).Clone(),
 			resCookie:     httpRes.Cookies(),
 			resUrl:        currentUrl,
