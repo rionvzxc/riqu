@@ -13,7 +13,7 @@ func TestResponseCookiesAndBinding(t *testing.T) {
 		http.SetCookie(w, &TCookie{Name: "count", Value: "12"})
 	}))
 	defer server.Close()
-	err := New().GET(server.URL).OnSuccess(func(response *QResponse) {
+	err := New().GET(server.URL).OnResponse(func(response *QResponse) error {
 		cookie := response.Cookie("session")
 		if cookie == nil || cookie.Value != "one" || cookie.Path != "/" || response.Cookie("missing") != nil {
 			t.Fatal("unexpected first cookie")
@@ -31,6 +31,7 @@ func TestResponseCookiesAndBinding(t *testing.T) {
 		if target.Count != 12 || len(target.Session) != 2 || target.Session[1] != "two" {
 			t.Fatalf("unexpected cookie binding: %+v", target)
 		}
+		return nil
 	}).Send()
 	if err != nil {
 		t.Fatal(err)

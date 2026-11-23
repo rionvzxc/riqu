@@ -10,11 +10,13 @@ import (
 func main() {
 	riqu.New().
 		GET("https://httpbin.org/status/404").
-		OnStatus(http.StatusNotFound, func(res *riqu.QResponse) {
+		OnStatus(http.StatusNotFound, func(res *riqu.QResponse) error {
 			fmt.Println("Resource not found:", res.Url())
+			return nil
 		}).
-		OnSuccess(func(res *riqu.QResponse) {
+		OnResponse(func(res *riqu.QResponse) error {
 			fmt.Println("Status:", res.StatusCode())
+			return nil
 		}).
 		OnError(func(err error) {
 			fmt.Println("Error:", err)

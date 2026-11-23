@@ -49,7 +49,7 @@ func TestAddQueryPreservesURLValuesAndRedirectQuery(t *testing.T) {
 	var text string
 	var readErr error
 	err := New().AddQuery("lang", "coba").GET(server.URL + "?lang=id").
-		OnSuccess(func(response *QResponse) { text, readErr = response.Text() }).Send()
+		OnResponse(func(response *QResponse) error { text, readErr = response.Text(); return nil }).Send()
 	if err != nil || readErr != nil || text != "lang=redirect" {
 		t.Fatalf("unexpected redirect result: %q, %v, %v", text, err, readErr)
 	}
@@ -67,7 +67,7 @@ func TestSetAllQueriesReplacesURLAndConfiguredValues(t *testing.T) {
 	values["lang"][0] = "changed"
 	var text string
 	var readErr error
-	request.OnSuccess(func(response *QResponse) { text, readErr = response.Text() })
+	request.OnResponse(func(response *QResponse) error { text, readErr = response.Text(); return nil })
 	for i := 0; i < 2; i++ {
 		if err := request.Send(); err != nil {
 			t.Fatal(err)

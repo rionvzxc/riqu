@@ -8,8 +8,9 @@ import (
 )
 
 func main() {
-	handleUnavailable := func(res *riqu.QResponse) {
+	handleUnavailable := func(res *riqu.QResponse) error {
 		fmt.Println("Service unavailable, try again later. Status:", res.StatusCode())
+		return nil
 	}
 
 	riqu.New().
@@ -18,8 +19,9 @@ func main() {
 			http.StatusTooManyRequests,
 			http.StatusServiceUnavailable,
 		}, handleUnavailable).
-		OnSuccess(func(res *riqu.QResponse) {
+		OnResponse(func(res *riqu.QResponse) error {
 			fmt.Println("Status:", res.StatusCode())
+			return nil
 		}).
 		OnError(func(err error) {
 			fmt.Println("Error:", err)

@@ -20,7 +20,7 @@ go get github.com/rionvzxc/riqu
 - Cookie and Cookie Jar management
 - Automatic redirect handling
 - Request timeout configuration
-- Success and error callbacks
+- Response and error callbacks
 - Status-specific response callbacks
 - Reusable transports with proxy and additional CA configuration
 
@@ -38,15 +38,15 @@ import (
 func main() {
     riqu.New().
         GET("https://httpbin.org/get").
-        OnSuccess(func(res *riqu.QResponse) {
+        OnResponse(func(res *riqu.QResponse) error {
             text, err := res.Text()
             
             if err != nil {
-                fmt.Println("Error:", err)
-                return
+                return err
             }
             fmt.Println(res.StatusCode())
             fmt.Println(text)
+            return nil
         }).
         OnError(func(err error) {
             fmt.Println(err)
@@ -54,6 +54,10 @@ func main() {
         Send()
 }
 ```
+
+## Error Handling
+
+`OnError` handles errors from request preparation, sending the request, and response processing, including errors returned by `OnResponse`, `OnStatus`, and `OnStatuses` callbacks. Return an error from a response callback to pass it to `OnError`, or return `nil` when processing succeeds or the error has already been handled. `Send()` still returns the error after `OnError` runs. HTTP 4xx and 5xx responses do not automatically become errors.
 
 ## Transport
 
@@ -74,8 +78,9 @@ defer transport.CloseIdleConnections()
 err = riqu.New().
     GET("https://httpbin.org/get").
     Transport(transport).
-    OnSuccess(func(res *riqu.QResponse) {
+    OnResponse(func(res *riqu.QResponse) error {
         fmt.Println("Status:", res.StatusCode())
+        return nil
     }).
     Send()
 if err != nil {

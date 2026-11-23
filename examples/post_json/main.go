@@ -16,13 +16,12 @@ func main() {
 				"retry":   3,
 			},
 		}).
-		OnSuccess(func(res *riqu.QResponse) {
+		OnResponse(func(res *riqu.QResponse) error {
 			var data struct {
 				JSON riqu.TMap `json:"json"`
 			}
 			if err := res.BindJSON(&data); err != nil {
-				fmt.Println("JSON Error:", err)
-				return
+				return err
 			}
 			fmt.Println("Status:", res.StatusCode())
 			fmt.Println("Response JSON:")
@@ -36,6 +35,7 @@ func main() {
 					}
 				}
 			}
+			return nil
 		}).
 		OnError(func(err error) {
 			fmt.Println("Error:", err)

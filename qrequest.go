@@ -32,8 +32,8 @@ type QRequest struct {
 	queryAll  bool
 	transport *QTransport
 
-	onStatusFunc  map[int]func(*QResponse)
-	onSuccessFunc func(*QResponse)
+	onStatusFunc  map[int]func(*QResponse) error
+	onResponseFunc func(*QResponse) error
 	onErrorFunc   func(error)
 }
 // New creates a request with default method, timeout, and redirect settings.
@@ -96,28 +96,32 @@ func (this *QRequest) RedirectOptions(options TRedirectOptions) *QRequest {
 	this.redirectOptions = options
 	return this
 }
-// OnSuccess sets the fallback callback for responses without a status handler.
-func (this *QRequest) OnSuccess(callbackFunc func(*QResponse)) *QRequest {
-	this.onSuccessFunc = callbackFunc
+// OnResponse sets the fallback callback for responses without a status handler.
+// Callback errors are passed to OnError and returned by Send.
+func (this *QRequest) OnResponse(callbackFunc func(*QResponse) error) *QRequest {
+	this.onResponseFunc = callbackFunc
 	return this
 }
 // OnStatus sets a status handler, replacing the previous handler for that status.
-// A nil handler restores the OnSuccess fallback.
-func (this *QRequest) OnStatus(status int, callbackFunc func(*QResponse)) *QRequest {
+// A nil handler restores the OnResponse fallback.
+// Callback errors are passed to OnError and returned by Send.
+func (this *QRequest) OnStatus(status int, callbackFunc func(*QResponse) error) *QRequest {
 	if this.onStatusFunc == nil {
-		this.onStatusFunc = make(map[int]func(*QResponse))
+		this.onStatusFunc = make(map[int]func(*QResponse) error)
 	}
 	this.onStatusFunc[status] = callbackFunc
 	return this
 }
 // OnStatuses sets the same handler for each supplied status.
-func (this *QRequest) OnStatuses(statuses []int, callbackFunc func(*QResponse)) *QRequest {
+// Callback errors are passed to OnError and returned by Send.
+func (this *QRequest) OnStatuses(statuses []int, callbackFunc func(*QResponse) error) *QRequest {
 	for _, status := range statuses {
 		this.OnStatus(status, callbackFunc)
 	}
 	return this
 }
 // OnError sets the callback invoked when request processing fails.
+// Send still returns the error after this callback runs.
 func (this *QRequest) OnError(callbackFunc func(error)) *QRequest {
 	this.onErrorFunc = callbackFunc
 	return this
@@ -125,14 +129,17 @@ func (this *QRequest) OnError(callbackFunc func(error)) *QRequest {
 func (this *QRequest) handleResponse(response *QResponse) (err error) {
 	defer func() {
 		if !response.bodyRead {
-			err = response.close()
+			closeErr := response.close()
+			if err == nil {
+				err = closeErr
+			}
 		}
 	}()
 
 	if callbackFunc := this.onStatusFunc[response.StatusCode()]; callbackFunc != nil {
-		callbackFunc(response)
-	} else if this.onSuccessFunc != nil {
-		this.onSuccessFunc(response)
+		return callbackFunc(response)
+	} else if this.onResponseFunc != nil {
+		return this.onResponseFunc(response)
 	}
 	return nil
 }

@@ -32,7 +32,7 @@ func TestTransportTLSVerification(t *testing.T) {
 	var text string
 	var readErr error
 	err = New().GET(server.URL).Transport(transport).
-		OnSuccess(func(response *QResponse) { text, readErr = response.Text() }).Send()
+		OnResponse(func(response *QResponse) error { text, readErr = response.Text(); return nil }).Send()
 	if err != nil || readErr != nil || text != "secure" {
 		t.Fatalf("trusted TLS failed: %q, %v, %v", text, err, readErr)
 	}
@@ -57,7 +57,7 @@ func TestRequestAcceptsEmptyTransport(t *testing.T) {
 	var text string
 	var readErr error
 	err := New().GET(server.URL).Transport(&transport).
-		OnSuccess(func(response *QResponse) { text, readErr = response.Text() }).Send()
+		OnResponse(func(response *QResponse) error { text, readErr = response.Text(); return nil }).Send()
 	if err != nil || readErr != nil || text != "ok" {
 		t.Fatalf("empty transport failed: %q, %v, %v", text, err, readErr)
 	}
@@ -78,7 +78,7 @@ func TestTransportHTTPProxy(t *testing.T) {
 	var text string
 	var readErr error
 	err = New().GET("http://example.invalid/resource?q=1").Transport(transport).
-		OnSuccess(func(response *QResponse) { text, readErr = response.Text() }).Send()
+		OnResponse(func(response *QResponse) error { text, readErr = response.Text(); return nil }).Send()
 	if err != nil || readErr != nil || text != "proxied" || receivedURL != "http://example.invalid/resource?q=1" {
 		t.Fatalf("proxy failed: %q, %q, %v, %v", receivedURL, text, err, readErr)
 	}
@@ -164,7 +164,7 @@ func TestTransportHTTPSProxyTunnel(t *testing.T) {
 	var text string
 	var readErr error
 	err = New().GET(server.URL).Transport(transport).
-		OnSuccess(func(response *QResponse) { text, readErr = response.Text() }).Send()
+		OnResponse(func(response *QResponse) error { text, readErr = response.Text(); return nil }).Send()
 	if err != nil || readErr != nil || text != "secure proxy" {
 		t.Fatalf("HTTPS tunnel failed: %q, %v, %v", text, err, readErr)
 	}

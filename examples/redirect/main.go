@@ -9,17 +9,17 @@ import (
 func main() {
 	riqu.New().
 		GET("https://httpbin.org/redirect/1").
-		OnSuccess(func(res *riqu.QResponse) {
+		OnResponse(func(res *riqu.QResponse) error {
 			text, err := res.Text()
 
 			if err != nil {
-				fmt.Println("Error:", err)
-				return
+				return err
 			}
 			fmt.Println("Status:", res.StatusCode())
 			fmt.Println("Request URL:", res.Url())
 			fmt.Println("Request Method:", res.Method())
 			fmt.Println(text)
+			return nil
 		}).
 		OnError(func(err error) {
 			fmt.Println("Error:", err)

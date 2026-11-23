@@ -16,14 +16,14 @@ func main() {
 		}).
 		SetHeader("X-Version", "2.0").
 		AddHeader("X-Tag", "go", "client").
-		OnSuccess(func(res *riqu.QResponse) {
+		OnResponse(func(res *riqu.QResponse) error {
 			text, err := res.Text()
 
 			if err != nil {
-				fmt.Println("Error:", err)
-				return
+				return err
 			}
 			fmt.Println(text)
+			return nil
 		}).
 		OnError(func(err error) {
 			fmt.Println(err)

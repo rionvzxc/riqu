@@ -10,8 +10,9 @@ func main() {
 	riqu.New().
 		Url("https://httpbin.org/delay/5").
 		Timeout(2 * time.Second).
-		OnSuccess(func(res *riqu.QResponse) {
+		OnResponse(func(res *riqu.QResponse) error {
 			fmt.Println("Success:", res.StatusCode())
+			return nil
 		}).
 		OnError(func(err error) {
 			fmt.Println("Error:", err)

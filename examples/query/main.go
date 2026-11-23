@@ -2,14 +2,12 @@ package main
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/rionvzxc/riqu"
 )
 
 func main() {
-	var responseErr error
-	err := riqu.New().
+	riqu.New().
 		GET("https://httpbin.org/get?old=removed").
 		SetAllQueries(riqu.TValues{
 			"q":    {"initial"},
@@ -18,7 +16,7 @@ func main() {
 		}).
 		SetQuery("q", "go http").
 		AddQuery("tag", "client", "api").
-		OnSuccess(func(res *riqu.QResponse) {
+		OnResponse(func(res *riqu.QResponse) error {
 			fmt.Println("Request URL:", res.Url())
 			fmt.Println("Query:", res.Query("q", ""))
 			fmt.Println("Tags:", res.QueryValues("tag"))
@@ -29,18 +27,16 @@ func main() {
 				Page   int      `query:"page"`
 				Tags   []string `query:"tag"`
 			}
-			responseErr = res.BindQuery(&query)
+			err := res.BindQuery(&query)
 
-			if responseErr != nil {
-				return
+			if err != nil {
+				return err
 			}
 			fmt.Printf("Bound query: %+v\n", query)
+			return nil
+		}).
+		OnError(func(err error) {
+			fmt.Println("Error:", err)
 		}).
 		Send()
-	if err != nil {
-		log.Fatal(err)
-	}
-	if responseErr != nil {
-		log.Fatal(responseErr)
-	}
 }

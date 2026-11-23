@@ -23,10 +23,26 @@ func TestHandleResponseReturnsCloseError(t *testing.T) {
 	}
 }
 
+func TestHandleResponsePreservesCallbackError(t *testing.T) {
+	callbackErr := errors.New("callback failed")
+	for _, closeErr := range []error{nil, errors.New("close failed")} {
+		body := &tTestReadCloser{Reader: strings.NewReader("response body"), closeErr: closeErr}
+		request := New().OnResponse(func(*QResponse) error {
+			return callbackErr
+		})
+		if err := request.handleResponse(&QResponse{body: body}); err != callbackErr {
+			t.Fatalf("expected callback error, got %v", err)
+		}
+		if body.closeCount != 1 {
+			t.Fatalf("expected body closed once, got %d", body.closeCount)
+		}
+	}
+}
+
 func TestHandleResponseClosesBodyWhenCallbackPanics(t *testing.T) {
 	body := &tTestReadCloser{Reader: strings.NewReader("response body")}
 	response := &QResponse{body: body}
-	request := New().OnSuccess(func(*QResponse) {
+	request := New().OnResponse(func(*QResponse) error {
 		panic("callback panic")
 	})
 

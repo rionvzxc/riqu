@@ -12,14 +12,14 @@ func main() {
 			"name":    {"riqu"},
 			"version": {"1.0"},
 		}).
-		OnSuccess(func(res *riqu.QResponse) {
+		OnResponse(func(res *riqu.QResponse) error {
 			text, err := res.Text()
 
 			if err != nil {
-				fmt.Println("Error:", err)
-				return
+				return err
 			}
 			fmt.Println(text)
+			return nil
 		}).
 		OnError(func(err error) {
 			fmt.Println(err)

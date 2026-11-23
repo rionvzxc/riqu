@@ -14,7 +14,7 @@ func TestResponseHeadersAndBinding(t *testing.T) {
 		w.Header().Set("X-Empty", "")
 	}))
 	defer server.Close()
-	err := New().GET(server.URL).OnSuccess(func(response *QResponse) {
+	err := New().GET(server.URL).OnResponse(func(response *QResponse) error {
 		if response.Header("x-count", "missing") != "12" || response.Header("missing", "default") != "default" || response.Header("X-Empty", "default") != "" {
 			t.Fatal("unexpected header lookup")
 		}
@@ -41,6 +41,7 @@ func TestResponseHeadersAndBinding(t *testing.T) {
 		if err := response.BindHeader(nil); err == nil {
 			t.Fatal("nil binding target must fail")
 		}
+		return nil
 	}).Send()
 	if err != nil {
 		t.Fatal(err)

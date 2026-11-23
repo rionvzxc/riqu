@@ -19,13 +19,13 @@ func TestResponseQueryUsesEachRedirectURL(t *testing.T) {
 		var pages []string
 		err := New().GET(server.URL + "/start?page=1").
 			RedirectOptions(TRedirectOptions{Max: 1, Responses: mode}).
-			OnSuccess(func(response *QResponse) {
+			OnResponse(func(response *QResponse) error {
 				pages = append(pages, response.Query("page", "missing"))
 				if response.Query("missing", "fallback") != "fallback" {
 					t.Fatal("expected default for missing parameter")
 				}
 				if response.StatusCode() != http.StatusOK {
-					return
+					return nil
 				}
 				if response.Query("empty", "fallback") != "" || response.Query("q", "") != "go http" {
 					t.Fatal("unexpected decoded query values")
@@ -48,6 +48,7 @@ func TestResponseQueryUsesEachRedirectURL(t *testing.T) {
 				if target.Page != 2 || !reflect.DeepEqual(target.Tags, []string{"go", "http"}) {
 					t.Fatalf("query copies changed binding: %+v", target)
 				}
+				return nil
 			}).Send()
 		if err != nil {
 			t.Fatal(err)

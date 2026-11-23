@@ -8,18 +8,18 @@ import (
 func main() {
 	riqu.New().
 		GET("https://httpbin.org/image/png").
-		OnSuccess(func(res *riqu.QResponse) {
+		OnResponse(func(res *riqu.QResponse) error {
 			err := res.File(&riqu.TFileOptions{
 				Dir: "downloads",
 				DefaultFilename: "httpbin-image",
 			})
 			if err != nil {
-				fmt.Println("Download Error:", err)
-				return
+				return err
 			}
 			fmt.Println("Download Success!")
 			fmt.Println("Status:", res.StatusCode())
 			fmt.Println("Content-Type:", res.Header("Content-Type", ""))
+			return nil
 		}).
 		OnError(func(err error) {
 			fmt.Println("Error:", err)

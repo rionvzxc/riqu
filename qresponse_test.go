@@ -47,10 +47,11 @@ func TestResponseContentLength(t *testing.T) {
 		{"/known", 5}, {"/unknown", -1}, {"/empty", 0},
 	} {
 		t.Run(test.path, func(t *testing.T) {
-			err := New().GET(server.URL + test.path).OnSuccess(func(response *QResponse) {
+			err := New().GET(server.URL + test.path).OnResponse(func(response *QResponse) error {
 				if response.ContentLength() != test.length {
 					t.Errorf("ContentLength() = %d, want %d", response.ContentLength(), test.length)
 				}
+				return nil
 			}).Send()
 			if err != nil {
 				t.Fatal(err)

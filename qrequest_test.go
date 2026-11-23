@@ -34,8 +34,9 @@ func TestSendPreservesCookieOnSameOriginRedirect(t *testing.T) {
 	var responseErr error
 	err := New().GET(server.URL + "/start").
 		SetAllCookies(TValues{"session": {"secret"}}).
-		OnSuccess(func(res *QResponse) {
+		OnResponse(func(res *QResponse) error {
 			responseBody, responseErr = res.Text()
+			return nil
 		}).
 		Send()
 	if err != nil {
@@ -73,8 +74,9 @@ func TestSendDoesNotRestoreSensitiveHeadersAfterCrossOriginRedirect(t *testing.T
 	err := New().GET(serverA.URL + "/start").
 		SetAllHeaders(THeader{"Authorization": []string{"Bearer secret"}}).
 		SetAllCookies(TValues{"session": {"secret"}}).
-		OnSuccess(func(res *QResponse) {
+		OnResponse(func(res *QResponse) error {
 			responseBody, responseErr = res.Text()
+			return nil
 		}).
 		Send()
 	if err != nil {
@@ -114,8 +116,9 @@ func TestSendValidatesCurrentConfiguration(t *testing.T) {
 		Timeout(time.Second).
 		RedirectOptions(TRedirectOptions{Max: -1}).
 		RedirectOptions(TRedirectOptions{Max: 1, Responses: VLastResponse}).
-		OnSuccess(func(res *QResponse) {
+		OnResponse(func(res *QResponse) error {
 			responseBody, responseErr = res.Text()
+			return nil
 		}).
 		Send()
 	if err != nil {
@@ -305,8 +308,9 @@ func TestMultipartStreamsAndReplaysFilesOn307(t *testing.T) {
 			Form: TValues{"name": {"riqu", "second"}},
 			File: TValues{"upload": {filePath}},
 		}).
-		OnSuccess(func(response *QResponse) {
+		OnResponse(func(response *QResponse) error {
 			responseBody, responseErr = response.Text()
+			return nil
 		}).
 		Send()
 
@@ -357,8 +361,9 @@ func TestMultipartAddsMissingBoundary(t *testing.T) {
 			err := New().POST(server.URL).
 				SetAllHeaders(THeader{"Content-Type": {contentType}}).
 				FormMultipart(TMultipart{Form: TValues{"name": {"riqu"}}}).
-				OnSuccess(func(response *QResponse) {
+				OnResponse(func(response *QResponse) error {
 					responseBody, responseErr = response.Text()
+					return nil
 				}).
 				Send()
 			if err != nil {
@@ -582,8 +587,9 @@ func TestSendAcceptsNilAndEmptyBodies(t *testing.T) {
 			var responseErr error
 			request := New().POST(server.URL)
 			test.configure(request)
-			err := request.OnSuccess(func(response *QResponse) {
+			err := request.OnResponse(func(response *QResponse) error {
 				responseBody, responseErr = response.Text()
+				return nil
 			}).Send()
 			if err != nil {
 				t.Fatal(err)
@@ -636,8 +642,9 @@ func TestSendZeroRedirectConfigurationDoesNotFollow(t *testing.T) {
 	var statusCode int
 	err := New().GET(server.URL + "/start").
 		RedirectOptions(TRedirectOptions{}).
-		OnSuccess(func(response *QResponse) {
+		OnResponse(func(response *QResponse) error {
 			statusCode = response.StatusCode()
+			return nil
 		}).
 		Send()
 	if err != nil {
@@ -664,8 +671,9 @@ func TestSendAllowsZeroTimeout(t *testing.T) {
 	var responseErr error
 	err := New().GET(server.URL).
 		Timeout(0).
-		OnSuccess(func(response *QResponse) {
+		OnResponse(func(response *QResponse) error {
 			responseBody, responseErr = response.Text()
+			return nil
 		}).
 		Send()
 	if err != nil {

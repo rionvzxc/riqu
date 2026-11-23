@@ -20,16 +20,16 @@ func main() {
 		SetAllCookies(riqu.TValues{"theme": {"light"}}).
 		SetCookie("theme", "dark").
 		AddCookie("language", "id").
-		OnSuccess(func(res *riqu.QResponse) {
+		OnResponse(func(res *riqu.QResponse) error {
 			text, err := res.Text()
 
 			if err != nil {
-				fmt.Println("Error:", err)
-				return
+				return err
 			}
 			fmt.Println("Response:")
 			fmt.Println("Status:", res.StatusCode())
 			fmt.Println(text)
+			return nil
 		}).
 		OnError(func(err error) {
 			fmt.Println("Error:", err)

@@ -2,18 +2,16 @@ package main
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/rionvzxc/riqu"
 )
 
 func main() {
-	var responseErr error
-	err := riqu.New().
+	riqu.New().
 		GET("https://httpbin.org/response-headers").
 		SetQuery("X-Count", "12").
 		AddQuery("Set-Cookie", "session=abc; Path=/; HttpOnly", "theme=dark; Path=/").
-		OnSuccess(func(res *riqu.QResponse) {
+		OnResponse(func(res *riqu.QResponse) error {
 			fmt.Println("Count header:", res.Header("X-Count", "0"))
 			fmt.Println("Set-Cookie headers:", res.HeaderValues("Set-Cookie"))
 			fmt.Println("All headers:", res.AllHeaders())
@@ -27,28 +25,26 @@ func main() {
 			var headers struct {
 				Count int `header:"X-Count"`
 			}
-			responseErr = res.BindHeader(&headers)
+			err := res.BindHeader(&headers)
 
-			if responseErr != nil {
-				return
+			if err != nil {
+				return err
 			}
 			var cookies struct {
 				Session string `cookie:"session"`
 				Theme   string `cookie:"theme"`
 			}
-			responseErr = res.BindCookie(&cookies)
+			err = res.BindCookie(&cookies)
 
-			if responseErr != nil {
-				return
+			if err != nil {
+				return err
 			}
 			fmt.Printf("Bound headers: %+v\n", headers)
 			fmt.Printf("Bound cookies: %+v\n", cookies)
+			return nil
+		}).
+		OnError(func(err error) {
+			fmt.Println("Error:", err)
 		}).
 		Send()
-	if err != nil {
-		log.Fatal(err)
-	}
-	if responseErr != nil {
-		log.Fatal(responseErr)
-	}
 }

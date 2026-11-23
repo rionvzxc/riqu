@@ -23,21 +23,20 @@ func main() {
 	}
 	defer transport.CloseIdleConnections()
 
-	var bodyErr error
-	err = riqu.New().GET(*targetURL).
+	riqu.New().GET(*targetURL).
 		Transport(transport).
-		OnSuccess(func(response *riqu.QResponse) {
-			var text string
-			text, bodyErr = response.Text()
-			if bodyErr == nil {
-				fmt.Println("Status:", response.StatusCode())
-				fmt.Println(text)
+		OnResponse(func(res *riqu.QResponse) error {
+			text, err := res.Text()
+
+			if err != nil {
+				return err
 			}
-		}).Send()
-	if err != nil {
-		log.Fatal(err)
-	}
-	if bodyErr != nil {
-		log.Fatal(bodyErr)
-	}
+			fmt.Println("Status:", res.StatusCode())
+			fmt.Println(text)
+			return nil
+		}).
+		OnError(func(err error) {
+			fmt.Println("Error:", err)
+		}).
+		Send()
 }

@@ -19,15 +19,15 @@ func main() {
 				"samplefile": {"examples/multipart/sample.txt"},
 			},
 		}).
-		OnSuccess(func(res *riqu.QResponse) {
+		OnResponse(func(res *riqu.QResponse) error {
 			text, err := res.Text()
 
 			if err != nil {
-				fmt.Println("Error:", err)
-				return
+				return err
 			}
 			fmt.Println("Status:", res.StatusCode())
 			fmt.Println(text)
+			return nil
 		}).
 		OnError(func(err error) {
 			fmt.Println(err)

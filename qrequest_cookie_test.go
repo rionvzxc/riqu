@@ -28,7 +28,7 @@ func TestRedirectUpdatesAndDeletesManualCookies(t *testing.T) {
 			request := New().GET(server.URL).
 				SetAllHeaders(THeader{"Cookie": {"session=header; keep=value"}}).
 				SetAllCookies(TValues{"session": {"old"}}).CookieJar(jar).
-				OnSuccess(func(response *QResponse) { text, readErr = response.Text() })
+				OnResponse(func(response *QResponse) error { text, readErr = response.Text(); return nil })
 			for i := 0; i < 2; i++ {
 				if err := request.Send(); err != nil {
 					t.Fatal(err)
