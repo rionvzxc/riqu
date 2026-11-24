@@ -19,6 +19,7 @@ const (
 )
 
 type QRequest struct {
+	maxResponseSize int64
 	reqContext context.Context
 	url       string
 	method    string
@@ -98,6 +99,11 @@ func (this *QRequest) Timeout(timeout time.Duration) *QRequest {
 	this.timeout = timeout
 	return this
 }
+// MaxResponseSize limits decoded response body bytes; zero disables the limit.
+func (this *QRequest) MaxResponseSize(size int64) *QRequest {
+	this.maxResponseSize = size
+	return this
+}
 // RedirectOptions sets the redirect policy for the request.
 func (this *QRequest) RedirectOptions(options TRedirectOptions) *QRequest {
 	this.redirectOptions = options
@@ -158,6 +164,10 @@ func (this *QRequest) handleResponseError(err error) {
 // Send executes the configured HTTP request.
 func (this *QRequest) Send() error {
 	var configErrors []error
+
+ if this.maxResponseSize < 0 {
+  configErrors = append(configErrors, errors.New("riqu: maximum response size cannot be negative"))
+ }
 
 	if this.timeout < 0 {
 		configErrors = append(configErrors, errors.New("riqu: timeout cannot be negative"))
@@ -382,7 +392,12 @@ func (this *QRequest) Send() error {
 			}
 			cookieChanges.jar.SetCookies(httpReq.URL, cookies)
 		}
-		qRes := &QResponse{
+  responseBody := httpRes.Body
+
+  if this.maxResponseSize > 0 {
+   responseBody = &tResponseLimitBody{ReadCloser: responseBody, remaining: this.maxResponseSize}
+  }
+  qRes := &QResponse{
 			statusCode:    httpRes.StatusCode,
 			status:        httpRes.Status,
 			contentLength: httpRes.ContentLength,
@@ -390,7 +405,7 @@ func (this *QRequest) Send() error {
 			resCookie:     httpRes.Cookies(),
 			resURL:        currentURL,
 			resMethod:     currentMethod,
-			body:          httpRes.Body,
+			body:          responseBody,
 		}
 
 		if this.redirectOptions.Responses == VAllResponses {

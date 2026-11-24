@@ -112,6 +112,7 @@ Runnable examples are available in the repository:
 | [context](https://github.com/rionvzxc/riqu/tree/main/examples/context) | Cancellation and deadlines |
 | [write_to](https://github.com/rionvzxc/riqu/tree/main/examples/write_to) | Stream a response body to a writer |
 | [body_reader](https://github.com/rionvzxc/riqu/tree/main/examples/body_reader) | Send a one-shot body from a reader |
+| [response_limit](https://github.com/rionvzxc/riqu/tree/main/examples/response_limit) | Limit response body size |
 
 To run an example, clone the repository and execute:
 
