@@ -11,13 +11,13 @@ func (this *QResponse) consumeBody(consume func(io.Reader) error) (err error) {
 	if this == nil {
 		return fmt.Errorf("riqu: response is nil")
 	}
-	if this.bodyRead {
+	if this.isBodyRead {
 		return fmt.Errorf("riqu: response body already read")
 	}
 	if this.body == nil {
 		return fmt.Errorf("riqu: response body unavailable")
 	}
-	this.bodyRead = true
+	this.isBodyRead = true
 	isCompleted := false
 	defer func() {
 		closeErr := this.body.Close()

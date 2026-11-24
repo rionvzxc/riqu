@@ -1,5 +1,19 @@
 package riqu
 
+// StatusCode returns the numeric HTTP status code.
+func (this *QResponse) StatusCode() int {
+	if this == nil {
+		return 0
+	}
+	return this.statusCode
+}
+// Status returns the HTTP response status, including its numeric code.
+func (this *QResponse) Status() string {
+	if this == nil {
+		return ""
+	}
+	return this.status
+}
 // IsInformational reports whether the response status is in the range 100–199.
 func (this *QResponse) IsInformational() bool {
 	return this.StatusCode() >= 100 && this.StatusCode() < 200

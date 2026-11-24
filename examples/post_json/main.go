@@ -29,7 +29,7 @@ func main() {
 			for key, value := range data.JSON {
 				fmt.Printf("%s = %v\n", key, value)
 
-				if nested, ok := value.(riqu.TMap); ok {
+				if nested, isValid := value.(riqu.TMap); isValid {
 					for nestedKey, nestedValue := range nested {
 						fmt.Printf("  %s = %v\n", nestedKey, nestedValue)
 					}

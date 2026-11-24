@@ -20,7 +20,7 @@ func TestTHeaderCanonicalizesNames(t *testing.T) {
 	if !header.Exist("CONTENT-TYPE") {
 		t.Fatal("expected canonical header name to exist")
 	}
-	if _, exists := header["Content-Type"]; !exists {
+	if _, isPresent := header["Content-Type"]; !isPresent {
 		t.Fatal("expected stored header key to be canonical")
 	}
 }

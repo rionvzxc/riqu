@@ -106,7 +106,7 @@ func TestResponseWriteToInvalidInputs(t *testing.T) {
 	body := &tTestReadCloser{Reader: strings.NewReader("payload")}
 	response = &QResponse{body: body}
 
-	if _, err := response.WriteTo(nil); err == nil || response.bodyRead || body.closeCount != 0 {
+	if _, err := response.WriteTo(nil); err == nil || response.isBodyRead || body.closeCount != 0 {
 		t.Fatal("nil writer must fail without consuming the body")
 	}
 	if _, err := response.WriteTo(io.Discard); err != nil {

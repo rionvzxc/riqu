@@ -12,13 +12,6 @@ import (
 	"time"
 )
 
-const (
-	// VLastResponse delivers only the final response to the response callback.
-	VLastResponse TResponseMode = iota
-	// VAllResponses delivers every response in the redirect chain to a response callback.
-	VAllResponses
-)
-
 type QRequest struct {
 	reqContext context.Context
 	url       string
@@ -31,7 +24,7 @@ type QRequest struct {
 	redirectOptions TRedirectOptions
 	query     TValues
 	querySet  map[string]bool
-	queryAll  bool
+	isAllQueriesSet  bool
 	transport *QTransport
 
 	onStatusFunc  map[int]func(*QResponse) error
@@ -145,7 +138,7 @@ func (this *QRequest) OnError(callbackFunc func(error)) *QRequest {
 }
 func (this *QRequest) handleResponse(response *QResponse) (err error) {
 	defer func() {
-		if !response.bodyRead {
+		if !response.isBodyRead {
 			closeErr := response.close()
 			if err == nil {
 				err = closeErr
@@ -239,8 +232,8 @@ func (this *QRequest) Send() error {
 			return err
 		}
 	}
-	if this.transport != nil && this.transport.transport != nil {
-		httpClient.Transport = this.transport.transport
+	if this.transport != nil && this.transport.httpTransport != nil {
+		httpClient.Transport = this.transport.httpTransport
 	}
 	// URL - Apply configured query values only to the initial request.
 	initialURL, err := url.Parse(this.url)
@@ -251,10 +244,10 @@ func (this *QRequest) Send() error {
 	}
 	currURL := this.url
 
-	if this.queryAll || len(this.query) > 0 {
+	if this.isAllQueriesSet || len(this.query) > 0 {
 		query := make(url.Values)
 
-		if !this.queryAll {
+		if !this.isAllQueriesSet {
 			query, err = url.ParseQuery(initialURL.RawQuery)
 
 			if err != nil {

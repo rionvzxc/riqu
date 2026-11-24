@@ -177,8 +177,8 @@ func TestSendUsesBodyContentType(t *testing.T) {
 }
 
 func TestHeaderContentTypeOverridesBodyContentType(t *testing.T) {
-	for _, headerFirst := range []bool{false, true} {
-		t.Run(fmt.Sprintf("header first=%t", headerFirst), func(t *testing.T) {
+	for _, isHeaderFirst := range []bool{false, true} {
+		t.Run(fmt.Sprintf("header first=%t", isHeaderFirst), func(t *testing.T) {
 			contentType := make(chan string, 1)
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 				contentType <- request.Header.Get("Content-Type")
@@ -187,7 +187,7 @@ func TestHeaderContentTypeOverridesBodyContentType(t *testing.T) {
 			defer server.Close()
 
 			request := New().POST(server.URL)
-			if headerFirst {
+			if isHeaderFirst {
 				request.SetAllHeaders(THeader{"Content-Type": []string{"application/custom"}}).Text("plain text")
 			} else {
 				request.Text("plain text").SetAllHeaders(THeader{"Content-Type": []string{"application/custom"}})
@@ -205,15 +205,15 @@ func TestHeaderContentTypeOverridesBodyContentType(t *testing.T) {
 func TestBodySerializationIsDeferredUntilSend(t *testing.T) {
 	request := New().POST("http://example.test").
 		Text("plain text")
-	if _, ok := request.body.value.(string); !ok {
+	if _, isValidType := request.body.value.(string); !isValidType {
 		t.Fatal("Text body was converted to bytes before Send")
 	}
 	request.Form(TValues{"name": {"riqu"}})
-	if _, ok := request.body.value.(TValues); !ok {
+	if _, isValidType := request.body.value.(TValues); !isValidType {
 		t.Fatal("Form body was encoded before Send")
 	}
 	request.HTML("<p>html</p>")
-	if _, ok := request.body.value.(string); !ok {
+	if _, isValidType := request.body.value.(string); !isValidType {
 		t.Fatal("HTML body was converted to bytes before Send")
 	}
 }
@@ -480,7 +480,7 @@ func TestSendAcceptsNilAndEmptyBodies(t *testing.T) {
 		name              string
 		configure         func(*QRequest)
 		contentType       string
-		contentTypePrefix bool
+		isContentTypePrefix bool
 		checkBody         func(*http.Request) error
 	}{
 		{
@@ -550,7 +550,7 @@ func TestSendAcceptsNilAndEmptyBodies(t *testing.T) {
 			name:              "nil multipart maps",
 			configure:         func(request *QRequest) { request.FormMultipart(TMultipart{}) },
 			contentType:       "multipart/form-data; boundary=",
-			contentTypePrefix: true,
+			isContentTypePrefix: true,
 			checkBody: func(request *http.Request) error {
 				if err := request.ParseMultipartForm(1024); err != nil {
 					return err
@@ -567,11 +567,11 @@ func TestSendAcceptsNilAndEmptyBodies(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 				contentType := request.Header.Get("Content-Type")
-				if test.contentTypePrefix && !strings.HasPrefix(contentType, test.contentType) {
+				if test.isContentTypePrefix && !strings.HasPrefix(contentType, test.contentType) {
 					http.Error(w, fmt.Sprintf("unexpected content type: %q", contentType), http.StatusBadRequest)
 					return
 				}
-				if !test.contentTypePrefix && contentType != test.contentType {
+				if !test.isContentTypePrefix && contentType != test.contentType {
 					http.Error(w, fmt.Sprintf("unexpected content type: %q", contentType), http.StatusBadRequest)
 					return
 				}

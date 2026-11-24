@@ -42,8 +42,8 @@ func (this THeader) GetAll(name string) []string {
 }
 // Exist reports whether an HTTP header is present.
 func (this THeader) Exist(name string) bool {
-	_, exists := this[http.CanonicalHeaderKey(name)]
-	return exists
+	_, isPresent := this[http.CanonicalHeaderKey(name)]
+	return isPresent
 }
 // Del removes an HTTP header.
 func (this THeader) Del(name string) {
@@ -60,12 +60,12 @@ func (this THeader) Clone() THeader {
 		canonicalName := http.CanonicalHeaderKey(name)
 
 		if values == nil {
-			if _, exists := header[canonicalName]; !exists {
+			if _, isPresent := header[canonicalName]; !isPresent {
 				header[canonicalName] = nil
 			}
 			continue
 		}
-		if _, exists := header[canonicalName]; !exists {
+		if _, isPresent := header[canonicalName]; !isPresent {
 			header[canonicalName] = make([]string, 0, len(values))
 		}
 		header[canonicalName] = append(header[canonicalName], values...)

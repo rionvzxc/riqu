@@ -9,9 +9,9 @@ import (
 func TestRequestAuthentication(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 		if request.URL.Path == "/basic" {
-			username, password, ok := request.BasicAuth()
-			if !ok || username != "user" || password != "pass:word" {
-				t.Errorf("unexpected Basic credentials: %q, %q, %t", username, password, ok)
+			username, password, isValid := request.BasicAuth()
+			if !isValid || username != "user" || password != "pass:word" {
+				t.Errorf("unexpected Basic credentials: %q, %q, %t", username, password, isValid)
 			}
 		} else if request.Header.Get("Authorization") != "Bearer token" {
 			t.Errorf("unexpected Bearer header: %q", request.Header.Get("Authorization"))

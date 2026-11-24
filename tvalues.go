@@ -39,8 +39,8 @@ func (this TValues) GetAll(name string) []string {
 }
 // Exist reports whether name is present in the map.
 func (this TValues) Exist(name string) bool {
-	_, exists := this[name]
-	return exists
+	_, isPresent := this[name]
+	return isPresent
 }
 // Del removes name and its values from the map.
 func (this TValues) Del(name string) {

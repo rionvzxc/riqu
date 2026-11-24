@@ -8,6 +8,7 @@ import (
 )
 
 func bindValues(target any, tagName string, values TValues) error {
+	// TARGET - Require a non-nil pointer to a struct before inspecting fields.
 	targetValue := reflect.ValueOf(target)
 
 	if targetValue.Kind() != reflect.Pointer || targetValue.IsNil() {
@@ -20,6 +21,7 @@ func bindValues(target any, tagName string, values TValues) error {
 	}
 	targetType := targetValue.Type()
 
+	// FIELDS - Resolve tags, skip unsettable fields, and convert matching values.
 	for i := 0; i < targetValue.NumField(); i++ {
 		field := targetValue.Field(i)
 		structField := targetType.Field(i)
@@ -50,12 +52,14 @@ func bindValues(target any, tagName string, values TValues) error {
 	return nil
 }
 func setBoundValue(field reflect.Value, values []string) error {
+	// POINTERS - Allocate missing values before binding the pointed-to value.
 	if field.Kind() == reflect.Pointer {
 		if field.IsNil() {
 			field.Set(reflect.New(field.Type().Elem()))
 		}
 		return setBoundValue(field.Elem(), values)
 	}
+	// SLICES - Convert every supplied value before assigning the completed slice.
 	if field.Kind() == reflect.Slice {
 		slice := reflect.MakeSlice(field.Type(), len(values), len(values))
 

@@ -24,6 +24,6 @@ func (this *QRequest) AddQuery(name string, values ...string) *QRequest {
 func (this *QRequest) SetAllQueries(values TValues) *QRequest {
 	this.query = values.Clone()
 	this.querySet = make(map[string]bool)
-	this.queryAll = true
+	this.isAllQueriesSet = true
 	return this
 }

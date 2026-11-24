@@ -17,23 +17,9 @@ type QResponse struct {
 	resQuery      TValues
 	queryOnce     sync.Once
 	queryErr      error
-	bodyRead      bool
+	isBodyRead      bool
 	body          io.ReadCloser
-	transferBody *tTransferBody
-}
-// StatusCode returns the numeric HTTP status code.
-func (this *QResponse) StatusCode() int {
-	if this == nil {
-		return 0
-	}
-	return this.statusCode
-}
-// Status returns the HTTP response status, including its numeric code.
-func (this *QResponse) Status() string {
-	if this == nil {
-		return ""
-	}
-	return this.status
+	transferBody      *tTransferBody
 }
 // ContentLength returns the response body length in bytes, or -1 when unknown.
 // A nil response also returns -1.
@@ -61,6 +47,6 @@ func (this *QResponse) close() error {
 	if this == nil || this.body == nil {
 		return nil
 	}
-	this.bodyRead = true
+	this.isBodyRead = true
 	return this.body.Close()
 }

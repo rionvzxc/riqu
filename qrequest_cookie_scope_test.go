@@ -33,7 +33,7 @@ func TestRedirectCookieDomainAndPublicSuffixScope(t *testing.T) {
 		target string
 		domain string
 		suffix string
-		delete bool
+		isDeletion bool
 		want   []string
 	}{
 		{"parent domain to child", "example.test", "a.example.test", "example.test", "", false, []string{"new"}},
@@ -58,7 +58,7 @@ func TestRedirectCookieDomainAndPublicSuffixScope(t *testing.T) {
 				if request.URL.Path == "/start" {
 					cookie := &http.Cookie{Name: "session", Value: "new", Domain: test.domain, Path: "/"}
 
-					if test.delete {
+					if test.isDeletion {
 						cookie.MaxAge = -1
 					}
 					http.SetCookie(w, cookie)
@@ -78,7 +78,7 @@ func TestRedirectCookieDomainAndPublicSuffixScope(t *testing.T) {
 			}))
 			defer server.Close()
 			var dialer net.Dialer
-			transport := &QTransport{transport: &http.Transport{
+			transport := &QTransport{httpTransport: &http.Transport{
 				DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
 					return dialer.DialContext(ctx, network, server.Listener.Addr().String())
 				},
@@ -111,16 +111,16 @@ func TestRedirectCookieDomainAndPublicSuffixScope(t *testing.T) {
 
 func TestRedirectCookieHTTPScope(t *testing.T) {
 	for _, scheme := range []string{"http", "https"} {
-		for _, secure := range []bool{false, true} {
-			for _, deleteCookie := range []bool{false, true} {
+		for _, isSecure := range []bool{false, true} {
+			for _, isCookieDeletion := range []bool{false, true} {
 				name := scheme
 
-				if secure {
+				if isSecure {
 					name += "/secure"
 				} else {
 					name += "/plain"
 				}
-				if deleteCookie {
+				if isCookieDeletion {
 					name += "/delete"
 				}
 				t.Run(name, func(t *testing.T) {
@@ -130,9 +130,9 @@ func TestRedirectCookieHTTPScope(t *testing.T) {
 						requests.Add(1)
 
 						if request.URL.Path == "/start" {
-							cookie := &http.Cookie{Name: "session", Value: "new", Path: "/", Secure: secure}
+							cookie := &http.Cookie{Name: "session", Value: "new", Path: "/", Secure: isSecure}
 
-							if deleteCookie {
+							if isCookieDeletion {
 								cookie.MaxAge = -1
 							}
 							http.SetCookie(w, cookie)
@@ -142,10 +142,10 @@ func TestRedirectCookieHTTPScope(t *testing.T) {
 						isHTTPS := request.TLS != nil
 						want := "new"
 
-						if deleteCookie || secure && !isHTTPS {
+						if isCookieDeletion || isSecure && !isHTTPS {
 							want = ""
 						}
-						if request.URL.Path == "/final" && secure && !isHTTPS {
+						if request.URL.Path == "/final" && isSecure && !isHTTPS {
 							want = "manual"
 						}
 						var values []string
@@ -177,7 +177,7 @@ func TestRedirectCookieHTTPScope(t *testing.T) {
 						origin, bridge = tlsServer.URL, plainServer.URL
 					}
 					// Trust only the local test certificate; keep TLS verification enabled.
-					transport := &QTransport{transport: tlsServer.Client().Transport.(*http.Transport).Clone()}
+					transport := &QTransport{httpTransport: tlsServer.Client().Transport.(*http.Transport).Clone()}
 					defer transport.CloseIdleConnections()
 					jar, err := NewCookieJar(nil)
 

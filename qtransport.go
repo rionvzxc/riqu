@@ -11,20 +11,25 @@ import (
 
 // QTransport wraps a reusable HTTP transport.
 type QTransport struct {
-	transport *http.Transport
+	httpTransport *http.Transport
 }
 // NewTransport creates a transport using environment proxies and system CAs by default.
 func NewTransport(options *TTransportOptions) (*QTransport, error) {
-	defaultTransport, ok := http.DefaultTransport.(*http.Transport)
-	if !ok || defaultTransport == nil {
+	// DEFAULTS - Clone the default transport to preserve connection and TLS settings.
+	defaultTransport, isHTTPTransport := http.DefaultTransport.(*http.Transport)
+
+	if !isHTTPTransport || defaultTransport == nil {
 		return nil, fmt.Errorf("riqu: default HTTP transport cannot be cloned")
 	}
 	transport := defaultTransport.Clone()
+
 	if options == nil {
-		return &QTransport{transport: transport}, nil
+		return &QTransport{httpTransport: transport}, nil
 	}
+	// PROXY - Validate and apply an explicit HTTP or HTTPS proxy.
 	if options.ProxyURL != "" {
 		proxyURL, err := url.Parse(options.ProxyURL)
+
 		if err != nil {
 			return nil, fmt.Errorf("riqu: invalid proxy URL: %w", err)
 		}
@@ -33,12 +38,15 @@ func NewTransport(options *TTransportOptions) (*QTransport, error) {
 		}
 		transport.Proxy = http.ProxyURL(proxyURL)
 	}
+	// TRUST - Add certificates from the supplied PEM file to the system CA pool.
 	if options.CAFile != "" {
 		certPEM, err := os.ReadFile(options.CAFile)
+
 		if err != nil {
 			return nil, fmt.Errorf("riqu: read CA file: %w", err)
 		}
 		roots, err := x509.SystemCertPool()
+
 		if err != nil {
 			return nil, fmt.Errorf("riqu: load system CA certificates: %w", err)
 		}
@@ -50,12 +58,12 @@ func NewTransport(options *TTransportOptions) (*QTransport, error) {
 		}
 		transport.TLSClientConfig.RootCAs = roots
 	}
-	return &QTransport{transport: transport}, nil
+	return &QTransport{httpTransport: transport}, nil
 }
 // CloseIdleConnections closes idle connections owned by the transport.
 func (this *QTransport) CloseIdleConnections() {
-	if this == nil || this.transport == nil {
+	if this == nil || this.httpTransport == nil {
 		return
 	}
-	this.transport.CloseIdleConnections()
+	this.httpTransport.CloseIdleConnections()
 }

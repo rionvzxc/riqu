@@ -58,7 +58,7 @@ func TestTValuesDelRemovesValues(t *testing.T) {
 	values := TValues{"name": {"first", "second"}}
 	values.Del("name")
 
-	if _, ok := values["name"]; ok {
+	if _, isPresent := values["name"]; isPresent {
 		t.Fatal("expected key to be deleted")
 	}
 }
@@ -79,7 +79,7 @@ func TestTValuesSetEmptyClearsValues(t *testing.T) {
 	values := TValues{"name": {"first"}}
 	values.Set("name")
 
-	if _, ok := values["name"]; !ok {
+	if _, isPresent := values["name"]; !isPresent {
 		t.Fatal("expected Set with no values to replace key with an empty slice")
 	}
 	if got := values.GetAll("name"); len(got) != 0 {

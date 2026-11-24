@@ -34,7 +34,7 @@ func TestUploadProgressPreservesTransportRetry(t *testing.T) {
 		t.Run(fmt.Sprint(isProgressEnabled), func(t *testing.T) {
 			var dialCount atomic.Int32
 			payloads := make(chan string, 2)
-			transport := &QTransport{transport: &http.Transport{
+			transport := &QTransport{httpTransport: &http.Transport{
 				DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
 					client, server := net.Pipe()
 					t.Cleanup(func() { client.Close(); server.Close() })

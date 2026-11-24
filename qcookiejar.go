@@ -30,23 +30,23 @@ func (this *QCookieJar) Cookies(rawURL string) (TCookies, error) {
 	if this == nil || this.jar == nil {
 		return nil, nil
 	}
-	u, err := url.Parse(rawURL)
+	parsedURL, err := url.Parse(rawURL)
 
 	if err != nil {
 		return nil, err
 	}
-	return this.jar.Cookies(u), nil
+	return this.jar.Cookies(parsedURL), nil
 }
 // SetCookies stores cookies for rawURL.
 func (this *QCookieJar) SetCookies(rawURL string, cookies TCookies) error {
 	if this == nil || this.jar == nil {
 		return nil
 	}
-	u, err := url.Parse(rawURL)
+	parsedURL, err := url.Parse(rawURL)
 
 	if err != nil {
 		return err
 	}
-	this.jar.SetCookies(u, cookies)
+	this.jar.SetCookies(parsedURL, cookies)
 	return nil
 }

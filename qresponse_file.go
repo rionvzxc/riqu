@@ -17,7 +17,7 @@ func (this *QResponse) File(options *TFileOptions) error {
 	if this == nil {
 		return fmt.Errorf("riqu: response is nil")
 	}
-	if this.bodyRead {
+	if this.isBodyRead {
 		return fmt.Errorf("riqu: response body already read")
 	}
 	if this.body == nil {
