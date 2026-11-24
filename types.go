@@ -32,15 +32,6 @@ type TRedirectOptions struct {
 	// Responses selects which redirect responses are delivered to callbacks.
 	Responses TResponseMode
 }
-// tRequestBody stores request body data and its content type.
-type tRequestBody struct {
-	// bodyType selects how value is encoded when sent.
-	bodyType tRequestBodyType
-	// value contains raw bytes or the value to encode.
-	value any
-	// contentType is the media type sent with the request body.
-	contentType string
-}
 // TFileOptions configures how a response body is saved to a file.
 type TFileOptions struct {
 	// Dir is the directory where the response file is saved.

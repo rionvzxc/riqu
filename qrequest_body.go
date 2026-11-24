@@ -12,21 +12,10 @@ import (
 	"path/filepath"
 )
 
-type tRequestBodyType uint
-
-const (
-	vRequestBodyData tRequestBodyType = iota
-	vRequestBodyText
-	vRequestBodyHTML
-	vRequestBodyJSON
-	vRequestBodyForm
-	vRequestBodyMultipart
-)
-
-type tPreparedBody struct {
-	data        []byte
-	contentType string
-	multipart   *TMultipart
+// BodyReader sets a one-shot body reader owned by the caller.
+func (this *QRequest) BodyReader(reader io.Reader) *QRequest {
+	this.body = tRequestBody{bodyType: vRequestBodyReader, value: &tRequestReader{reader: reader}}
+	return this
 }
 // Data sets a raw request body.
 func (this *QRequest) Data(data []byte) *QRequest {
@@ -84,20 +73,28 @@ func (this *QRequest) FormMultipart(multipart TMultipart) *QRequest {
 	return this
 }
 func (this *QRequest) prepareBody() (tPreparedBody, error) {
+	// ENCODING - Convert the current body value into bytes or a multipart description.
 	prepared := tPreparedBody{contentType: this.body.contentType}
 
 	switch this.body.bodyType {
-	case vRequestBodyData:
-		data, ok := this.body.value.([]byte)
+	case vRequestBodyReader:
+		reader, isValidType := this.body.value.(*tRequestReader)
 
-		if !ok && this.body.value != nil {
+		if !isValidType || reader == nil || reader.reader == nil {
+			return tPreparedBody{}, errors.New("riqu: body reader is nil")
+		}
+		prepared.reader = reader
+	case vRequestBodyData:
+		data, isValidType := this.body.value.([]byte)
+
+		if !isValidType && this.body.value != nil {
 			return tPreparedBody{}, errors.New("riqu: invalid raw body")
 		}
 		prepared.data = data
 	case vRequestBodyText, vRequestBodyHTML:
-		value, ok := this.body.value.(string)
+		value, isValidType := this.body.value.(string)
 
-		if !ok {
+		if !isValidType {
 			return tPreparedBody{}, errors.New("riqu: invalid request body")
 		}
 		prepared.data = []byte(value)
@@ -109,9 +106,9 @@ func (this *QRequest) prepareBody() (tPreparedBody, error) {
 		}
 		prepared.data = data
 	case vRequestBodyForm:
-		formMap, ok := this.body.value.(TValues)
+		formMap, isValidType := this.body.value.(TValues)
 
-		if !ok {
+		if !isValidType {
 			return tPreparedBody{}, errors.New("riqu: invalid form body")
 		}
 		form := url.Values{}
@@ -121,9 +118,9 @@ func (this *QRequest) prepareBody() (tPreparedBody, error) {
 		}
 		prepared.data = []byte(form.Encode())
 	case vRequestBodyMultipart:
-		formData, ok := this.body.value.(TMultipart)
+		formData, isValidType := this.body.value.(TMultipart)
 
-		if !ok {
+		if !isValidType {
 			return tPreparedBody{}, errors.New("riqu: invalid multipart body")
 		}
 		prepared.multipart = &formData
@@ -133,6 +130,7 @@ func (this *QRequest) prepareBody() (tPreparedBody, error) {
 	return prepared, nil
 }
 func (this *QRequest) multipartBodyReader(formData TMultipart) (io.ReadCloser, string, error) {
+	// CONTENT TYPE - Validate an explicit multipart header and read its parameters.
 	contentType := this.header.Get("Content-Type")
 	var params map[string]string
 
@@ -147,6 +145,7 @@ func (this *QRequest) multipartBodyReader(formData TMultipart) (io.ReadCloser, s
 		}
 		params = parsedParams
 	}
+	// BOUNDARY - Keep the header and streamed multipart body on the same boundary.
 	pipeReader, pipeWriter := io.Pipe()
 	writer := multipart.NewWriter(pipeWriter)
 
@@ -160,10 +159,10 @@ func (this *QRequest) multipartBodyReader(formData TMultipart) (io.ReadCloser, s
 		pipeWriter.CloseWithError(err)
 		return nil, "", err
 	}
-
+	// STREAM - Produce multipart data as the HTTP transport reads from the pipe.
 	go func() {
 		var writeErr error
-
+		// FIELDS - Write all values for each form field.
 		for key, values := range formData.Form {
 			for _, value := range values {
 				if err := writer.WriteField(key, value); err != nil {
@@ -175,6 +174,7 @@ func (this *QRequest) multipartBodyReader(formData TMultipart) (io.ReadCloser, s
 				break
 			}
 		}
+		// FILES - Open, copy, and close each file without buffering its full contents.
 		if writeErr == nil {
 			for key, paths := range formData.File {
 				for _, path := range paths {
@@ -209,6 +209,7 @@ func (this *QRequest) multipartBodyReader(formData TMultipart) (io.ReadCloser, s
 				}
 			}
 		}
+		// FINISH - Write the closing boundary or propagate the producer error.
 		if writeErr == nil {
 			writeErr = writer.Close()
 		}

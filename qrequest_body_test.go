@@ -1,6 +1,7 @@
 package riqu
 
 import (
+	"strings"
 	"compress/gzip"
 	"bytes"
 	"fmt"
@@ -153,5 +154,68 @@ func TestRedirectBodyEncoding(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+type tOwnedReader struct {
+	*strings.Reader
+	closes int
+}
+
+func (this *tOwnedReader) Close() error { this.closes++; return nil }
+
+func TestBodyReaderOwnershipAndReuse(t *testing.T) {
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		data, err := io.ReadAll(r.Body)
+		if err != nil || string(data) != "payload" {
+			t.Errorf("body=%q err=%v", data, err)
+		}
+	}))
+	defer server.Close()
+	reader := &tOwnedReader{Reader: strings.NewReader("payload")}
+	request := New().POST(server.URL).BodyReader(reader)
+	if err := request.Send(); err != nil {
+		t.Fatal(err)
+	}
+	if err := request.Send(); err == nil {
+		t.Fatal("expected one-shot reader reuse error")
+	}
+	if reader.closes != 0 || requests != 1 {
+		t.Fatalf("closes=%d requests=%d", reader.closes, requests)
+	}
+	reader.Seek(0, io.SeekStart)
+	if err := request.BodyReader(reader).Send(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBodyReaderRedirectPolicy(t *testing.T) {
+	for _, status := range []int{303, 307, 308} {
+		requests := 0
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requests++
+			io.Copy(io.Discard, r.Body)
+			if r.URL.Path == "/" {
+				http.Redirect(w, r, "/final", status)
+				return
+			}
+			if r.Method != "GET" {
+				t.Errorf("unexpected method %s", r.Method)
+			}
+		}))
+		err := New().POST(server.URL).BodyReader(strings.NewReader("payload")).Send()
+		server.Close()
+		if status == 303 {
+			if err != nil || requests != 2 {
+				t.Fatalf("303: err=%v requests=%d", err, requests)
+			}
+		} else if err == nil || requests != 1 {
+			t.Fatalf("%d: err=%v requests=%d", status, err, requests)
+		}
+	}
+	if err := New().POST("http://unused.invalid").BodyReader(nil).Send(); err == nil {
+		t.Fatal("expected nil reader error")
 	}
 }

@@ -262,7 +262,9 @@ func (this *QRequest) Send() error {
 		bodyContentType := preparedBody.contentType
 
 		if sendBody {
-			if preparedBody.multipart != nil {
+			if preparedBody.reader != nil {
+    bodyReader = io.NopCloser(preparedBody.reader.reader)
+   } else if preparedBody.multipart != nil {
 				multipartReader, contentType, err := this.multipartBodyReader(*preparedBody.multipart)
 
 				if err != nil {
@@ -352,7 +354,16 @@ func (this *QRequest) Send() error {
 				}
 			}
 		}
-		// RESPONSE
+  if sendBody && preparedBody.reader != nil {
+   if preparedBody.reader.isUsed {
+    if httpReq.Body != nil { httpReq.Body.Close() }
+    err := errors.New("riqu: body reader has already been used; set a new BodyReader before replaying")
+    this.handleResponseError(err)
+    return err
+   }
+   preparedBody.reader.isUsed = true
+  }
+  // RESPONSE
 		httpRes, err := httpClient.Do(httpReq)
 
 		if err != nil {
