@@ -7,7 +7,7 @@ import (
 
 func main() {
 	riqu.New().
-		Url("https://httpbin.org/get").
+		URL("https://httpbin.org/get").
 		Method("GET").
 		OnResponse(func(res *riqu.QResponse) error {
 			text, err := res.Text()

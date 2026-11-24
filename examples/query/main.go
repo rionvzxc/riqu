@@ -17,7 +17,7 @@ func main() {
 		SetQuery("q", "go http").
 		AddQuery("tag", "client", "api").
 		OnResponse(func(res *riqu.QResponse) error {
-			fmt.Println("Request URL:", res.Url())
+			fmt.Println("Request URL:", res.URL())
 			fmt.Println("Query:", res.Query("q", ""))
 			fmt.Println("Tags:", res.QueryValues("tag"))
 			fmt.Println("All queries:", res.AllQueries())

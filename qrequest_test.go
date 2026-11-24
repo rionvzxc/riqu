@@ -453,7 +453,7 @@ func TestSendRejectsBlankURLAndMethod(t *testing.T) {
 		{
 			name: "blank URL",
 			configure: func(request *QRequest) {
-				request.Url("")
+				request.URL("")
 			},
 		},
 		{

@@ -47,7 +47,7 @@ func (this *QResponse) BindQuery(target any) error {
 }
 func (this *QResponse) parseQuery() {
 	this.queryOnce.Do(func() {
-		parsedURL, err := url.Parse(this.resUrl)
+		parsedURL, err := url.Parse(this.resURL)
 
 		if err != nil {
 			this.queryErr = fmt.Errorf("riqu: parse response URL: %w", err)

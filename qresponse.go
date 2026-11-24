@@ -12,7 +12,7 @@ type QResponse struct {
 	contentLength int64
 	resHeader     THeader
 	resCookie     TCookies
-	resUrl        string
+	resURL        string
 	resMethod     string
 	resQuery      TValues
 	queryOnce     sync.Once
@@ -42,12 +42,12 @@ func (this *QResponse) ContentLength() int64 {
 	}
 	return this.contentLength
 }
-// Url returns the URL used for this response.
-func (this *QResponse) Url() string {
+// URL returns the URL used for this response.
+func (this *QResponse) URL() string {
 	if this == nil {
 		return ""
 	}
-	return this.resUrl
+	return this.resURL
 }
 // Method returns the HTTP method used for this response.
 func (this *QResponse) Method() string {

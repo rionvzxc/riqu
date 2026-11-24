@@ -21,7 +21,7 @@ func TestSendExplicitBodyOnGETAndHEAD(t *testing.T) {
 				}
 			}))
 			defer server.Close()
-			if err := New().Url(server.URL).Method(method).Text("payload").Send(); err != nil {
+			if err := New().URL(server.URL).Method(method).Text("payload").Send(); err != nil {
 				t.Fatal(err)
 			}
 		})
@@ -64,7 +64,7 @@ func TestRedirectBodyPolicy(t *testing.T) {
 				}
 			}))
 			defer server.Close()
-			if err := New().Url(server.URL).Method(test.method).Text("payload").Send(); err != nil {
+			if err := New().URL(server.URL).Method(test.method).Text("payload").Send(); err != nil {
 				t.Fatal(err)
 			}
 		})

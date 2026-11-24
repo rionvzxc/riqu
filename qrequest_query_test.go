@@ -77,7 +77,7 @@ func TestSetAllQueriesReplacesURLAndConfiguredValues(t *testing.T) {
 		}
 	}
 	for _, empty := range []TValues{nil, {}} {
-		request.Url(server.URL + "/?old=value").SetAllQueries(empty)
+		request.URL(server.URL + "/?old=value").SetAllQueries(empty)
 		if err := request.Send(); err != nil {
 			t.Fatal(err)
 		}

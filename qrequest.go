@@ -49,8 +49,8 @@ func New() *QRequest {
 		},
 	}
 }
-// Url sets the request URL.
-func (this *QRequest) Url(url string) *QRequest {
+// URL sets the request URL.
+func (this *QRequest) URL(url string) *QRequest {
 	url = strings.TrimSpace(url)
 	this.url = url
 	return this
@@ -63,23 +63,23 @@ func (this *QRequest) Method(method string) *QRequest {
 }
 // GET configures a GET request for url.
 func (this *QRequest) GET(url string) *QRequest {
-	return this.Url(url).Method("GET")
+	return this.URL(url).Method("GET")
 }
 // POST configures a POST request for url.
 func (this *QRequest) POST(url string) *QRequest {
-	return this.Url(url).Method("POST")
+	return this.URL(url).Method("POST")
 }
 // PUT configures a PUT request for url.
 func (this *QRequest) PUT(url string) *QRequest {
-	return this.Url(url).Method("PUT")
+	return this.URL(url).Method("PUT")
 }
 // DELETE configures a DELETE request for url.
 func (this *QRequest) DELETE(url string) *QRequest {
-	return this.Url(url).Method("DELETE")
+	return this.URL(url).Method("DELETE")
 }
 // PATCH configures a PATCH request for url.
 func (this *QRequest) PATCH(url string) *QRequest {
-	return this.Url(url).Method("PATCH")
+	return this.URL(url).Method("PATCH")
 }
 // Transport sets the reusable transport used by the request; nil uses the default.
 func (this *QRequest) Transport(transport *QTransport) *QRequest {
@@ -204,18 +204,18 @@ func (this *QRequest) Send() error {
 	if this.transport != nil && this.transport.transport != nil {
 		httpClient.Transport = this.transport.transport
 	}
-	initialUrl, err := url.Parse(this.url)
+	initialURL, err := url.Parse(this.url)
 
 	if err != nil {
 		this.handleResponseError(err)
 		return err
 	}
-	currentUrl := this.url
+	currentURL := this.url
 
 	if this.queryAll || len(this.query) > 0 {
 		query := make(url.Values)
 		if !this.queryAll {
-			query, err = url.ParseQuery(initialUrl.RawQuery)
+			query, err = url.ParseQuery(initialURL.RawQuery)
 			if err != nil {
 				this.handleResponseError(err)
 				return err
@@ -227,9 +227,9 @@ func (this *QRequest) Send() error {
 			}
 			query[key] = append(query[key], values...)
 		}
-		initialUrl.RawQuery = query.Encode()
-		initialUrl.ForceQuery = false
-		currentUrl = initialUrl.String()
+		initialURL.RawQuery = query.Encode()
+		initialURL.ForceQuery = false
+		currentURL = initialURL.String()
 	}
 	currentMethod := this.method
 	sendBody := currentMethod != "GET" && currentMethod != "HEAD" ||
@@ -263,7 +263,7 @@ func (this *QRequest) Send() error {
 				bodyReader = bytes.NewReader(preparedBody.data)
 			}
 		}
-		httpReq, err := http.NewRequestWithContext(requestContext, currentMethod, currentUrl, bodyReader)
+		httpReq, err := http.NewRequestWithContext(requestContext, currentMethod, currentURL, bodyReader)
 
 		if err != nil {
 			if bodyCloser != nil {
@@ -277,14 +277,14 @@ func (this *QRequest) Send() error {
 			httpReq.Header = initialRequest.Header.Clone()
 			// HEADER - Redirect
 		} else {
-			currentParsed, err := url.Parse(currentUrl)
+			currentParsed, err := url.Parse(currentURL)
 
 			if err != nil {
 				this.handleResponseError(err)
 				return err
 			}
-			sameOrigin := strings.EqualFold(initialUrl.Scheme, currentParsed.Scheme) &&
-				strings.EqualFold(initialUrl.Host, currentParsed.Host)
+			sameOrigin := strings.EqualFold(initialURL.Scheme, currentParsed.Scheme) &&
+				strings.EqualFold(initialURL.Host, currentParsed.Host)
 
 			if sameOrigin {
 				httpReq.Header = initialRequest.Header.Clone()
@@ -362,7 +362,7 @@ func (this *QRequest) Send() error {
 			contentLength: httpRes.ContentLength,
 			resHeader:     THeader(httpRes.Header).Clone(),
 			resCookie:     httpRes.Cookies(),
-			resUrl:        currentUrl,
+			resURL:        currentURL,
 			resMethod:     currentMethod,
 			body:          httpRes.Body,
 		}
@@ -392,20 +392,20 @@ func (this *QRequest) Send() error {
 				return err
 			}
 		}
-		// REDIRECT - Set Url & Method
-		redirectUrl, err := url.Parse(httpRes.Header.Get("Location"))
+		// REDIRECT - Set URL & Method
+		redirectURL, err := url.Parse(httpRes.Header.Get("Location"))
 
 		if err != nil {
 			this.handleResponseError(err)
 			return err
 		}
-		currentParsed, err := url.Parse(currentUrl)
+		currentParsed, err := url.Parse(currentURL)
 
 		if err != nil {
 			this.handleResponseError(err)
 			return err
 		}
-		currentUrl = currentParsed.ResolveReference(redirectUrl).String()
+		currentURL = currentParsed.ResolveReference(redirectURL).String()
 
 		switch httpRes.StatusCode {
 		case 303:

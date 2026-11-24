@@ -64,7 +64,7 @@ func TestResponseQueryUsesEachRedirectURL(t *testing.T) {
 }
 
 func TestResponseQueryParsingErrors(t *testing.T) {
-	response := &QResponse{resUrl: "https://example.com/?page=2&bad=%zz"}
+	response := &QResponse{resURL: "https://example.com/?page=2&bad=%zz"}
 	if response.Query("page", "") != "2" || response.Query("bad", "fallback") != "fallback" {
 		t.Fatal("expected successfully parsed values to remain available")
 	}
@@ -75,11 +75,11 @@ func TestResponseQueryParsingErrors(t *testing.T) {
 	if err == nil || !strings.HasPrefix(err.Error(), "riqu: ") || target.Page != 0 {
 		t.Fatalf("expected parsing error before binding, got %+v, %v", target, err)
 	}
-	invalidURL := &QResponse{resUrl: ":invalid"}
+	invalidURL := &QResponse{resURL: ":invalid"}
 	if invalidURL.Query("page", "default") != "default" || invalidURL.BindQuery(&target) == nil {
 		t.Fatal("expected invalid URL to return defaults and a binding error")
 	}
-	valid := &QResponse{resUrl: "https://example.com/?page=bad"}
+	valid := &QResponse{resURL: "https://example.com/?page=bad"}
 	if valid.BindQuery(&target) == nil || valid.BindQuery(nil) == nil {
 		t.Fatal("expected conversion and invalid target errors")
 	}

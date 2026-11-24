@@ -40,7 +40,7 @@ func (this *QResponse) File(options *TFileOptions) error {
 		filename = options.DefaultFilename
 	}
 	if filename == "" {
-		parsedURL, err := url.Parse(this.resUrl)
+		parsedURL, err := url.Parse(this.resURL)
 
 		if err == nil {
 			filename = path.Base(parsedURL.Path)

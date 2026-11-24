@@ -59,7 +59,7 @@ func TestRequestContentTypeWithoutBody(t *testing.T) {
 				}))
 				defer server.Close()
 
-				if err := New().Url(server.URL).Method(method).ContentType("application/custom").Send(); err != nil {
+				if err := New().URL(server.URL).Method(method).ContentType("application/custom").Send(); err != nil {
 					t.Fatal(err)
 				}
 			})

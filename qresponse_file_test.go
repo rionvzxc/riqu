@@ -24,7 +24,7 @@ func TestResponseFileInvalidResponse(t *testing.T) {
 func TestResponseFileUsesFallbackNameForRootURL(t *testing.T) {
 	dir := t.TempDir()
 	response := &QResponse{
-		resUrl: "https://example.com/",
+		resURL: "https://example.com/",
 		body:       io.NopCloser(strings.NewReader("response body")),
 	}
 	if err := response.File(&TFileOptions{Dir: dir}); err != nil {

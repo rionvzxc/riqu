@@ -11,7 +11,7 @@ func main() {
 	riqu.New().
 		GET("https://httpbin.org/status/404").
 		OnStatus(http.StatusNotFound, func(res *riqu.QResponse) error {
-			fmt.Println("Resource not found:", res.Url())
+			fmt.Println("Resource not found:", res.URL())
 			return nil
 		}).
 		OnResponse(func(res *riqu.QResponse) error {

@@ -12,7 +12,7 @@ func TestNilResponseMetadata(t *testing.T) {
 	if response.ContentLength() != -1 {
 		t.Fatal("expected unknown length for nil response")
 	}
-	if response.StatusCode() != 0 || response.Status() != "" || response.Url() != "" || response.Method() != "" {
+	if response.StatusCode() != 0 || response.Status() != "" || response.URL() != "" || response.Method() != "" {
 		t.Fatal("unexpected nil response metadata")
 	}
 	if response.Header("missing", "default") != "default" || response.AllHeaders() != nil || response.HeaderValues("x") != nil {

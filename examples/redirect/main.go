@@ -16,7 +16,7 @@ func main() {
 				return err
 			}
 			fmt.Println("Status:", res.StatusCode())
-			fmt.Println("Request URL:", res.Url())
+			fmt.Println("Request URL:", res.URL())
 			fmt.Println("Request Method:", res.Method())
 			fmt.Println(text)
 			return nil
