@@ -109,6 +109,7 @@ Runnable examples are available in the repository:
 | [on_status](https://github.com/rionvzxc/riqu/tree/main/examples/on_status) | Handle a specific HTTP status |
 | [on_statuses](https://github.com/rionvzxc/riqu/tree/main/examples/on_statuses) | Handle multiple HTTP statuses |
 | [transport](https://github.com/rionvzxc/riqu/tree/main/examples/transport) | Proxy and additional CA configuration |
+| [context](https://github.com/rionvzxc/riqu/tree/main/examples/context) | Cancellation and deadlines |
 
 To run an example, clone the repository and execute:
 

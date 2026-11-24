@@ -19,6 +19,7 @@ const (
 )
 
 type QRequest struct {
+	reqContext context.Context
 	url       string
 	method    string
 	header    THeader
@@ -84,6 +85,12 @@ func (this *QRequest) PATCH(url string) *QRequest {
 // Transport sets the reusable transport used by the request; nil uses the default.
 func (this *QRequest) Transport(transport *QTransport) *QRequest {
 	this.transport = transport
+	return this
+}
+// Context sets the parent context; nil uses context.Background.
+// It applies to all redirects and response body reads during Send.
+func (this *QRequest) Context(ctx context.Context) *QRequest {
+	this.reqContext = ctx
 	return this
 }
 // Timeout sets the request timeout; zero disables the timeout.
@@ -177,7 +184,13 @@ func (this *QRequest) Send() error {
 		this.handleResponseError(err)
 		return err
 	}
-	requestContext := context.Background()
+	requestContext := this.reqContext
+
+ if requestContext == nil { requestContext = context.Background() }
+ if err := requestContext.Err(); err != nil {
+  this.handleResponseError(err)
+  return err
+ }
 
 	if this.timeout > 0 {
 		var cancel context.CancelFunc
