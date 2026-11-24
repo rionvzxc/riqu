@@ -1,6 +1,8 @@
 package riqu
 
 import (
+	"testing/iotest"
+	"bytes"
 	"errors"
 	"io"
 	"strings"
@@ -169,5 +171,110 @@ func TestResponseBindJSONClosesBodyWhenDecoderPanics(t *testing.T) {
 		if _, err := response.Data(); err == nil {
 			t.Fatal("expected body to remain marked as consumed")
 		}
+	}
+}
+
+var _ io.WriterTo = (*QResponse)(nil)
+
+type tTestStreamWriter struct {
+	bytes.Buffer
+	closeCount int
+}
+
+func (this *tTestStreamWriter) Close() error {
+	this.closeCount++
+	return nil
+}
+
+type tTestWriterFunc func([]byte) (int, error)
+
+func (this tTestWriterFunc) Write(data []byte) (int, error) {
+	return this(data)
+}
+
+func TestResponseWriteTo(t *testing.T) {
+	body := &tTestReadCloser{Reader: strings.NewReader("payload")}
+	response := &QResponse{body: body}
+	writer := &tTestStreamWriter{}
+	written, err := response.WriteTo(writer)
+
+	if err != nil || written != 7 || writer.String() != "payload" {
+		t.Fatalf("written=%d, data=%q, error=%v", written, writer.String(), err)
+	}
+	if body.closeCount != 1 || writer.closeCount != 0 {
+		t.Fatalf("body closes=%d, writer closes=%d", body.closeCount, writer.closeCount)
+	}
+	if _, err := response.WriteTo(writer); err == nil {
+		t.Fatal("expected second read to fail")
+	}
+}
+
+func TestResponseWriteToPreservesErrorsAndCount(t *testing.T) {
+	writeErr := errors.New("write failed")
+	closeErr := errors.New("close failed")
+	body := &tTestReadCloser{Reader: strings.NewReader("payload"), closeErr: closeErr}
+	response := &QResponse{body: body}
+	written, err := response.WriteTo(tTestWriterFunc(func(data []byte) (int, error) {
+		return 2, writeErr
+	}))
+
+	if written != 2 || !errors.Is(err, writeErr) || !errors.Is(err, closeErr) || body.closeCount != 1 {
+		t.Fatalf("written=%d, error=%v, closes=%d", written, err, body.closeCount)
+	}
+}
+
+func TestResponseWriteToReadErrorAndShortWrite(t *testing.T) {
+	readErr := errors.New("read failed")
+	body := &tTestReadCloser{Reader: io.MultiReader(strings.NewReader("partial"), iotest.ErrReader(readErr))}
+	var buffer bytes.Buffer
+	written, err := (&QResponse{body: body}).WriteTo(&buffer)
+
+	if written != 7 || buffer.String() != "partial" || !errors.Is(err, readErr) || body.closeCount != 1 {
+		t.Fatalf("written=%d, data=%q, error=%v, closes=%d", written, buffer.String(), err, body.closeCount)
+	}
+	body = &tTestReadCloser{Reader: strings.NewReader("payload")}
+	written, err = (&QResponse{body: body}).WriteTo(tTestWriterFunc(func([]byte) (int, error) {
+		return 1, nil
+	}))
+
+	if written != 1 || !errors.Is(err, io.ErrShortWrite) || body.closeCount != 1 {
+		t.Fatalf("written=%d, error=%v, closes=%d", written, err, body.closeCount)
+	}
+}
+
+func TestResponseWriteToClosesBodyOnPanic(t *testing.T) {
+	body := &tTestReadCloser{Reader: strings.NewReader("payload")}
+	response := &QResponse{body: body}
+	var recovered any
+
+	func() {
+		defer func() { recovered = recover() }()
+		response.WriteTo(tTestWriterFunc(func([]byte) (int, error) {
+			panic("writer panic")
+		}))
+	}()
+
+	if recovered != "writer panic" || body.closeCount != 1 {
+		t.Fatalf("panic=%v, closes=%d", recovered, body.closeCount)
+	}
+}
+
+func TestResponseWriteToInvalidInputs(t *testing.T) {
+	var response *QResponse
+
+	if _, err := response.WriteTo(io.Discard); err == nil {
+		t.Fatal("expected nil response error")
+	}
+	if _, err := (&QResponse{}).WriteTo(io.Discard); err == nil {
+		t.Fatal("expected unavailable body error")
+	}
+	body := &tTestReadCloser{Reader: strings.NewReader("payload")}
+	response = &QResponse{body: body}
+
+	if _, err := response.WriteTo(nil); err == nil || response.bodyRead || body.closeCount != 0 {
+		t.Fatal("nil writer must fail without consuming the body")
+	}
+	if _, err := response.WriteTo(io.Discard); err != nil {
+		t.Fatal(err)
 	}
 }

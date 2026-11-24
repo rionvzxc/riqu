@@ -1,6 +1,7 @@
 package riqu
 
 import (
+	"fmt"
 	"encoding/json"
 	"errors"
 	"io"
@@ -43,4 +44,27 @@ func (this *QResponse) BindJSON(target any) (err error) {
 		}
 		return decodeErr
 	})
+}
+
+// WriteTo copies the response body to writer and closes the body.
+// It returns the number of bytes written and does not close writer.
+func (this *QResponse) WriteTo(writer io.Writer) (written int64, err error) {
+	if this == nil {
+		return 0, fmt.Errorf("riqu: response is nil")
+	}
+	if this.bodyRead {
+		return 0, fmt.Errorf("riqu: response body already read")
+	}
+	if this.body == nil {
+		return 0, fmt.Errorf("riqu: response body unavailable")
+	}
+	if writer == nil {
+		return 0, fmt.Errorf("riqu: writer is nil")
+	}
+	err = this.consumeBody(func(reader io.Reader) error {
+		var copyErr error
+		written, copyErr = io.Copy(writer, reader)
+		return copyErr
+	})
+	return written, err
 }

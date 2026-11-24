@@ -110,6 +110,7 @@ Runnable examples are available in the repository:
 | [on_statuses](https://github.com/rionvzxc/riqu/tree/main/examples/on_statuses) | Handle multiple HTTP statuses |
 | [transport](https://github.com/rionvzxc/riqu/tree/main/examples/transport) | Proxy and additional CA configuration |
 | [context](https://github.com/rionvzxc/riqu/tree/main/examples/context) | Cancellation and deadlines |
+| [write_to](https://github.com/rionvzxc/riqu/tree/main/examples/write_to) | Stream a response body to a writer |
 
 To run an example, clone the repository and execute:
 

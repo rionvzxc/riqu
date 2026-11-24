@@ -59,3 +59,19 @@ func TestHandleResponseClosesBodyWhenCallbackPanics(t *testing.T) {
 		t.Fatalf("expected body to be closed once, got %d", body.closeCount)
 	}
 }
+
+func TestHandleResponseWriteToDoesNotCloseTwice(t *testing.T) {
+	writeErr := errors.New("write failed")
+	body := &tTestReadCloser{Reader: strings.NewReader("payload")}
+	request := New().OnResponse(func(res *QResponse) error {
+		_, err := res.WriteTo(tTestWriterFunc(func([]byte) (int, error) {
+			return 0, writeErr
+		}))
+		return err
+	})
+	err := request.handleResponse(&QResponse{body: body})
+
+	if !errors.Is(err, writeErr) || body.closeCount != 1 {
+		t.Fatalf("error=%v, closes=%d", err, body.closeCount)
+	}
+}
