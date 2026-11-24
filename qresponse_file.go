@@ -13,6 +13,7 @@ import (
 
 // File saves the response body using the supplied file options.
 func (this *QResponse) File(options *TFileOptions) error {
+	// VALIDATION - Check that the response body is available and not consumed.
 	if this == nil {
 		return fmt.Errorf("riqu: response is nil")
 	}
@@ -25,7 +26,7 @@ func (this *QResponse) File(options *TFileOptions) error {
 	if options == nil {
 		options = &TFileOptions{}
 	}
-	// FILENAME
+	// FILENAME - Prefer explicit options, then response headers and URL fallbacks.
 	filename := options.Filename
 
 	if filename == "" {
@@ -54,7 +55,7 @@ func (this *QResponse) File(options *TFileOptions) error {
 		filename = "download"
 	}
 	filename = filepath.Base(filename)
-	// EXTENSION
+	// EXTENSION - Infer an extension from Content-Type when the filename has none.
 	if filepath.Ext(filename) == "" {
 		contentType := this.resHeader.Get("Content-Type")
 		mediaType, _, _ := mime.ParseMediaType(contentType)
@@ -64,7 +65,7 @@ func (this *QResponse) File(options *TFileOptions) error {
 			filename += extensions[0]
 		}
 	}
-	// DIRECTORY
+	// DIRECTORY - Create the requested directory and resolve the destination.
 	if options.Dir != "" {
 		if err := os.MkdirAll(options.Dir, 0755); err != nil {
 			return err
@@ -77,15 +78,25 @@ func (this *QResponse) File(options *TFileOptions) error {
 	if err != nil {
 		return err
 	}
-	this.bodyRead = true
-	_, copyErr := io.Copy(file, this.body)
-	fileCloseErr := file.Close()
-	bodyCloseErr := this.body.Close()
-	err = errors.Join(copyErr, fileCloseErr, bodyCloseErr)
+	isFileSaved := false
+	defer func() {
+		file.Close()
 
+		if !isFileSaved {
+			os.Remove(file.Name())
+		}
+	}()
+	// COPY - Consume the body into the temporary file and collect close errors.
+	err = this.consumeBody(func(reader io.Reader) error {
+		_, copyErr := io.Copy(file, reader)
+		return errors.Join(copyErr, file.Close())
+	})
+
+	// REPLACE - Publish the completed file only after copying and closing succeed.
 	if err == nil {
 		err = os.Rename(file.Name(), filename)
 	}
+	// CLEANUP - Remove the temporary file if copying or replacement failed.
 	if err != nil {
 		removeErr := os.Remove(file.Name())
 
@@ -94,5 +105,6 @@ func (this *QResponse) File(options *TFileOptions) error {
 		}
 		return err
 	}
+	isFileSaved = true
 	return nil
 }

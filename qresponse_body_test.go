@@ -132,3 +132,42 @@ func (this *tTestReadCloser) Close() error {
 	this.closeCount++
 	return this.closeErr
 }
+
+type tTestPanicJSON struct{}
+
+func (this *tTestPanicJSON) UnmarshalJSON(data []byte) error {
+	panic("custom JSON decoder panic")
+}
+
+func TestResponseBindJSONClosesBodyWhenDecoderPanics(t *testing.T) {
+	for _, isThroughCallback := range []bool{false, true} {
+		body := &tTestReadCloser{Reader: strings.NewReader(`{"ok":true}`)}
+		response := &QResponse{body: body}
+		var target tTestPanicJSON
+		var recovered any
+
+		func() {
+			defer func() {
+				recovered = recover()
+			}()
+
+			if isThroughCallback {
+				New().OnResponse(func(res *QResponse) error {
+					return res.BindJSON(&target)
+				}).handleResponse(response)
+			} else {
+				response.BindJSON(&target)
+			}
+		}()
+
+		if recovered != "custom JSON decoder panic" {
+			t.Fatalf("unexpected panic: %v", recovered)
+		}
+		if body.closeCount != 1 {
+			t.Fatalf("expected body closed once, got %d (callback: %v)", body.closeCount, isThroughCallback)
+		}
+		if _, err := response.Data(); err == nil {
+			t.Fatal("expected body to remain marked as consumed")
+		}
+	}
+}
