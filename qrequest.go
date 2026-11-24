@@ -296,6 +296,7 @@ func (this *QRequest) Send() error {
 					"Cache-Control":   true,
 					"Pragma":          true,
 					"Content-Type":    true,
+					"Content-Encoding": true,
 				}
 
 				for key, values := range this.header {
@@ -317,6 +318,7 @@ func (this *QRequest) Send() error {
 		// HEADER - Content-Type
 		if bodyDropped {
 			httpReq.Header.Del("Content-Type")
+			httpReq.Header.Del("Content-Encoding")
 		} else if bodyReader != nil && (preparedBody.multipart != nil || (!this.header.Exist("Content-Type") && bodyContentType != "")) {
 			httpReq.Header.Set("Content-Type", bodyContentType)
 		}
