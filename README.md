@@ -113,6 +113,7 @@ Runnable examples are available in the repository:
 | [write_to](https://github.com/rionvzxc/riqu/tree/main/examples/write_to) | Stream a response body to a writer |
 | [body_reader](https://github.com/rionvzxc/riqu/tree/main/examples/body_reader) | Send a one-shot body from a reader |
 | [response_limit](https://github.com/rionvzxc/riqu/tree/main/examples/response_limit) | Limit response body size |
+| [transfer](https://github.com/rionvzxc/riqu/tree/main/examples/transfer) | Upload and download lifecycle callbacks |
 
 To run an example, clone the repository and execute:
 

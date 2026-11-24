@@ -90,3 +90,34 @@ func TestRequestContextAndTimeoutUseEarlierDeadline(t *testing.T) {
 		}
 	}
 }
+
+func TestRequestContextCancelsWriteTo(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("first"))
+		w.(http.Flusher).Flush()
+		<-r.Context().Done()
+	}))
+	defer server.Close()
+	var written int64
+	calls := 0
+	ends := 0
+	var end TTransferInfo
+	err := New().GET(server.URL).Context(ctx).
+		OnDownloadEnd(func(info TTransferInfo) { ends++; end = info }).OnResponse(func(res *QResponse) error {
+		var err error
+		written, err = res.WriteTo(tTestWriterFunc(func(data []byte) (int, error) {
+			cancel()
+			return len(data), nil
+		}))
+		return err
+	}).OnError(func(error) { calls++ }).Send()
+
+	if !errors.Is(err, context.Canceled) || written != 5 || calls != 1 {
+		t.Fatalf("error=%v, written=%d, callbacks=%d", err, written, calls)
+	}
+	if ends != 1 || end.Transferred != 5 || !errors.Is(end.Err, context.Canceled) {
+		t.Fatalf("ends=%d info=%+v", ends, end)
+	}
+}

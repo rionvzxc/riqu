@@ -19,6 +19,7 @@ type QResponse struct {
 	queryErr      error
 	bodyRead      bool
 	body          io.ReadCloser
+	transferBody *tTransferBody
 }
 // StatusCode returns the numeric HTTP status code.
 func (this *QResponse) StatusCode() int {

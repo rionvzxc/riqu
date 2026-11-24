@@ -5,6 +5,20 @@ import (
 	"net/http/cookiejar"
 )
 
+// TTransferInfo describes one request or response body transfer.
+type TTransferInfo struct {
+	// URL is the destination of this transfer, including a redirect destination.
+	URL string
+	// Method is the HTTP method used for this transfer.
+	Method string
+	// Transferred counts body bytes read, not bytes committed by a destination writer.
+	Transferred int64
+	// Total is -1 when the body length is unknown.
+	Total int64
+	// Err is populated for an unsuccessful End event.
+	Err error
+}
+
 // TMap is a generic map with string keys.
 type TMap = map[string]any
 
